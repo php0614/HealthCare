@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthCare 관리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #4f8ef7;
+      --blue-dark: #3a7be8;
+      --blue-light: #ebf3ff;
+      --red: #e74c3c;
+      --green: #27ae60;
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --border: #e8eaef;
+      --text: #111827;
+      --text-muted: #6b7280;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .app-header-icon { width: 28px; height: 28px; }
+    .app-header h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      flex: 1;
+    }
+    .save-status {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .save-status.idle    { background:#f0f0f0; color:#888; }
+    .save-status.saving  { background:#fff8e1; color:#f39c12; }
+    .save-status.saved   { background:#e8f5e9; color:var(--green); }
+    .save-status.error   { background:#fdecea; color:var(--red); }
+
+    /* ── Main 2-col Layout (desktop) ── */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      grid-template-rows: 1fr 1fr;
+      grid-template-areas:
+        "supp  cal"
+        "fit   cal";
+      gap: 10px;
+      padding: 10px;
+      flex: 1;
+      min-height: calc(100vh - 52px);
+    }
+
+    /* Permanent grid-area assignments (work across all breakpoints) */
+    .main-layout > .panel:first-child { grid-area: supp; }
+    .cal-panel                         { grid-area: cal; }
+    .main-layout > .panel:last-child   { grid-area: fit; }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 11px 13px 9px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 7px;
+    }
+    .panel-actions { display: flex; gap: 5px; }
+    .btn-add, .btn-remove {
+      flex: 1;
+      padding: 5px 8px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-add    { background: var(--blue); color: #fff; }
+    .btn-add:hover { background: var(--blue-dark); }
+    .btn-remove { background: #f4f4f4; color: #555; border: 1px solid #ddd; }
+    .btn-remove:hover { background: #fde8e8; color: var(--red); }
+
+    .item-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 7px;
+    }
+    .empty-hint {
+      text-align: center;
+      color: #bbb;
+      font-size: 0.78rem;
+      margin-top: 22px;
+      font-family: "Noto Sans KR", sans-serif;
+      line-height: 1.6;
+    }
+    .item-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      border-radius: 9px;
+      margin-bottom: 3px;
+      transition: background 0.12s;
+    }
+    .item-card:hover { background: #f7f8fc; }
+    .item-icon-wrap { width: 34px; height: 34px; flex-shrink: 0; }
+    .item-icon-wrap svg { width: 34px; height: 34px; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #222;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── Calendar Panel ── */
+    .cal-panel {
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .cal-header {
+      padding: 11px 14px 9px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .cal-title { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; }
+    .cal-nav { display: flex; gap: 5px; }
+    .btn-nav {
+      width: 26px; height: 26px;
+      border: 1px solid var(--border);
+      background: #f8f8f8;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-nav:hover { background: #e8e8e8; }
+
+    .cal-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+    }
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 5px;
+      flex-shrink: 0;
+    }
+    .cal-wd {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 4px 0;
+    }
+    .cal-wd.sat { color: #2e6be6; }
+    .cal-wd.sun { color: var(--red); }
+
+    .cal-weeks {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .cal-week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      /* each row: roughly 1/4 of remaining calendar height, min 130px */
+      flex: 1;
+      min-height: 130px;
+    }
+    .cal-day {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 7px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      transition: background 0.1s, border-color 0.1s;
+      position: relative;
+    }
+    .cal-day:hover { background: #f5f8ff; }
+    .cal-day.this-week { border-color: #c2d7ff; background: #f8fbff; }
+    .cal-day.today     { border-color: var(--blue) !important; background: var(--blue-light) !important; }
+    .cal-day.pressing  { background: #dde8ff !important; }
+
+    .day-num {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+    .day-num.today-n { color: var(--blue); }
+    .day-num.sat-n   { color: #2e6be6; }
+    .day-num.sun-n   { color: var(--red); }
+
+    .day-entries { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
+    .d-entry {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      line-height: 1.3;
+      overflow: hidden;
+    }
+    .d-entry-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .d-entry-icon svg { width: 16px; height: 16px; }
+    .d-entry-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #333;
+    }
+    .d-entry.type-supplement .d-entry-text { color: #2e7d32; }
+    .d-entry.type-fitness    .d-entry-text { color: #1565c0; }
+
+    /* right-click hint tooltip (desktop only) */
+    .cal-day::after {
+      content: "우클릭: 편집";
+      position: absolute;
+      bottom: 3px; right: 4px;
+      font-size: 0.52rem;
+      color: #bbb;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .cal-day:hover::after { opacity: 1; }
+
+    /* ── Day Detail Popup ── */
+    .detail-modal {
+      width: 460px;
+      max-height: 82vh;
+    }
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 14px;
+      margin-bottom: 4px;
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .detail-date {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      line-height: 1.1;
+    }
+    .detail-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .detail-close-btn {
+      width: 30px; height: 30px;
+      border: none;
+      background: #f0f0f0;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      color: #555;
+      transition: background 0.12s;
+    }
+    .detail-close-btn:hover { background: #e0e0e0; }
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .detail-section-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 14px 0 7px;
+    }
+    .detail-section-title:first-child { margin-top: 6px; }
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      background: #f7f9fc;
+      margin-bottom: 6px;
+      border: 1px solid #eef0f5;
+    }
+    .detail-item-icon     { width: 40px; height: 40px; flex-shrink: 0; }
+    .detail-item-icon svg { width: 40px; height: 40px; }
+    .detail-item-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111;
+    }
+    .detail-item-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .detail-item-time {
+      margin-left: auto;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--blue);
+      white-space: nowrap;
+      padding-left: 8px;
+    }
+    .detail-empty {
+      text-align: center;
+      color: #bbb;
+      font-size: 0.9rem;
+      padding: 36px 0 20px;
+      line-height: 1.8;
+      font-family: "Noto Sans KR", sans-serif;
+    }
+
+    /* ── Modals ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.38);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      animation: fadeIn 0.15s ease;
+    }
+    .overlay.hidden { display: none; }
+    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 20px;
+      width: 360px;
+      max-width: 92vw;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.16);
+      animation: slideUp 0.18s ease;
+    }
+    @keyframes slideUp { from { transform:translateY(16px); opacity:0 } to { transform:none; opacity:1 } }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 13px;
+    }
+    .modal-section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 10px 0 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .modal input[type="text"],
+    .modal input[type="time"],
+    .modal input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .modal input:focus { border-color: var(--blue); }
+
+    .sets-reps-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .sets-reps-row input { flex: 1; }
+    .sr-x { font-size: 1.1rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+
+    /* Icon grid */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      max-height: 240px;
+      overflow-y: auto;
+      padding: 3px;
+    }
+    .icon-opt {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 5px 6px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.2;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .icon-opt:hover { border-color: var(--blue); }
+    .icon-opt.sel   { border-color: var(--blue); background: var(--blue-light); }
+    .icon-opt svg   { width: 34px; height: 34px; margin-bottom: 4px; }
+
+    /* Modal actions */
+    .modal-actions {
+      display: flex; gap: 8px; margin-top: 14px; flex-shrink: 0;
+    }
+    .btn-primary {
+      flex: 1; padding: 9px;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 9px;
+      font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-secondary {
+      flex: 1; padding: 9px;
+      background: #f4f4f4; color: #555;
+      border: 1px solid #ddd; border-radius: 9px;
+      font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-secondary:hover { background: #e8e8e8; }
+    .btn-danger { background: var(--red); }
+    .btn-danger:hover { background: #c0392b; }
+
+    /* Day menu modal */
+    .day-modal-scroll {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .day-section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #555;
+      padding: 8px 0 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+      position: sticky; top: 0; background: #fff; z-index: 1;
+    }
+    .day-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 8px; border-radius: 9px; cursor: pointer;
+    }
+    .day-item:hover { background: #f5f8ff; }
+    .day-item-icon  { width: 30px; height: 30px; flex-shrink: 0; }
+    .day-item-icon svg { width: 30px; height: 30px; }
+    .day-item-name  { font-size: 0.82rem; font-weight: 600; flex: 1; }
+    .day-item-meta  { font-size: 0.7rem; color: var(--text-muted); }
+    .check-circle {
+      width: 22px; height: 22px;
+      border: 2px solid #ccc; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .check-circle.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+    /* Remove list */
+    .remove-list { overflow-y: auto; max-height: 280px; }
+    .rm-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 9px; border-radius: 9px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .rm-item:hover { background: #fff4f4; }
+    .rm-item.sel   { background: #fde8e8; }
+    .rm-item-name  { flex: 1; font-size: 0.82rem; font-weight: 600; }
+    .rm-chk        { font-size: 0.9rem; color: #ccc; }
+    .rm-item.sel .rm-chk { color: var(--red); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+    /* ── Responsive: narrow desktop / large tablet (≤768px) ── */
+    @media (max-width: 768px) {
+      .main-layout {
+        grid-template-columns: 200px 1fr;
+        gap: 7px;
+        padding: 7px;
+        min-height: calc(100vh - 50px);
+      }
+      .cal-week { min-height: 110px; }
+      .d-entry  { font-size: 0.66rem; }
+    }
+
+    /* ── Responsive: mobile portrait (≤600px) ── */
+    @media (max-width: 600px) {
+      .app-header h1 { font-size: 0.9rem; }
+
+      .main-layout {
+        /* calendar full-width on top, two panels side-by-side below */
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "cal   cal"
+          "supp  fit";
+        gap: 8px;
+        padding: 8px;
+        min-height: 0;
+      }
+
+      .cal-panel {
+        grid-area: cal;
+        /* give the calendar plenty of room on mobile */
+        min-height: 72vw;
+      }
+
+      /* supplement panel = left bottom */
+      .main-layout > .panel:first-child {
+        grid-area: supp;
+        min-height: 260px;
+        max-height: 340px;
+      }
+
+      /* fitness panel = right bottom */
+      .main-layout > .panel:last-child {
+        grid-area: fit;
+        min-height: 260px;
+        max-height: 340px;
+      }
+
+      /* smaller side panels: compact headers */
+      .panel-title    { font-size: 0.76rem; }
+      .btn-add,
+      .btn-remove     { font-size: 0.7rem; padding: 5px 6px; }
+      .item-name      { font-size: 0.76rem; }
+      .item-meta      { font-size: 0.66rem; }
+      .item-icon-wrap { width: 28px; height: 28px; }
+      .item-icon-wrap svg { width: 28px; height: 28px; }
+
+      /* calendar: tighter but still readable */
+      .cal-wd         { font-size: 0.68rem; }
+      .day-num        { font-size: 0.72rem; }
+      .cal-week       { min-height: 80px; }
+      .d-entry        { font-size: 0.62rem; gap: 3px; }
+      .d-entry-icon, .d-entry-icon svg { width: 13px; height: 13px; }
+      .cal-day        { padding: 4px 4px; border-radius: 8px; }
+      /* hide long-press hint on mobile to save space */
+      .cal-day::after { display: none; }
+
+      /* wider modals on small screens */
+      .modal { padding: 16px; }
+      .icon-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .icon-opt svg { width: 30px; height: 30px; }
+      .icon-opt { font-size: 0.65rem; }
+    }
+
+    /* ── Very small phones (≤380px) ── */
+    @media (max-width: 380px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "cal"
+          "supp"
+          "fit";
+      }
+      .cal-panel {
+        min-height: 90vw;
+      }
+      .main-layout > .panel:first-child,
+      .main-layout > .panel:last-child {
+        max-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <svg class="app-header-icon" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="8" fill="#4f8ef7"/>
+      <path d="M14 6v16M6 14h16" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="14" cy="14" r="4" fill="none" stroke="#fff" stroke-width="1.5"/>
+    </svg>
+    <h1>HealthCare 관리</h1>
+    <span id="save-status" class="save-status idle">로딩 중...</span>
+  </header>
+
+  <!-- ── Main Layout ── -->
+  <main class="main-layout">
+
+    <!-- LEFT: Supplements -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">💊 보조제 복용 관리</div>
+        <div class="panel-actions">
+          <button class="btn-add"    onclick="openAddModal('supplement')">+ 추가</button>
+          <button class="btn-remove" onclick="openRemoveModal('supplement')">− 제거</button>
+        </div>
+      </div>
+      <div class="item-list" id="supp-list"></div>
+    </section>
+
+    <!-- CENTER: Calendar -->
+    <section class="cal-panel">
+      <div class="cal-header">
+        <span class="cal-title" id="cal-range">캘린더</span>
+        <div class="cal-nav">
+          <button class="btn-nav" onclick="shiftView(-1)" title="이전 주">&#8592;</button>
+          <button class="btn-nav" onclick="shiftView(0)"  title="오늘로">○</button>
+          <button class="btn-nav" onclick="shiftView(+1)" title="다음 주">&#8594;</button>
+        </div>
+      </div>
+      <div class="cal-body">
+        <div class="cal-weekdays">
+          <div class="cal-wd">월</div>
+          <div class="cal-wd">화</div>
+          <div class="cal-wd">수</div>
+          <div class="cal-wd">목</div>
+          <div class="cal-wd">금</div>
+          <div class="cal-wd sat">토</div>
+          <div class="cal-wd sun">일</div>
+        </div>
+        <div class="cal-weeks" id="cal-weeks"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Fitness -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🏋️ 피트니스 관리</div>
+        <div class="panel-actions">
+          <button class="btn-add"    onclick="openAddModal('fitness')">+ 추가</button>
+          <button class="btn-remove" onclick="openRemoveModal('fitness')">− 제거</button>
+        </div>
+      </div>
+      <div class="item-list" id="fit-list"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Add Modal ── -->
+<div class="overlay hidden" id="add-overlay">
+  <div class="modal">
+    <div class="modal-title" id="add-title">항목 추가</div>
+    <div class="modal-section-label">이름</div>
+    <input type="text" id="add-name" placeholder="이름을 입력하세요...">
+    <div id="add-sr-section" style="display:none">
+      <div class="modal-section-label">세트 × 반복</div>
+      <div class="sets-reps-row">
+        <input type="number" id="add-sets" value="3" min="1" max="99">
+        <span class="sr-x">×</span>
+        <input type="number" id="add-reps" value="15" min="1" max="999">
+      </div>
+    </div>
+    <div class="modal-section-label">아이콘</div>
+    <div class="icon-grid" id="add-icon-grid"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeOverlay('add-overlay')">취소</button>
+      <button class="btn-primary"   onclick="confirmAdd()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Remove Modal ── -->
+<div class="overlay hidden" id="rm-overlay">
+  <div class="modal">
+    <div class="modal-title" id="rm-title">항목 제거</div>
+    <div class="remove-list" id="rm-list"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeOverlay('rm-overlay')">취소</button>
+      <button class="btn-primary btn-danger" onclick="confirmRemove()">제거</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Day Modal ── -->
+<div class="overlay hidden" id="day-overlay">
+  <div class="modal" style="width:400px">
+    <div class="modal-title" id="day-title">날짜 관리</div>
+    <div class="day-modal-scroll" id="day-scroll">
+      <div class="day-section-title">💊 보조제</div>
+      <div id="day-supp-items"></div>
+      <div class="day-section-title" style="margin-top:6px">🏋️ 피트니스</div>
+      <div id="day-fit-items"></div>
+    </div>
+    <div class="modal-section-label" style="margin-top:10px">시간</div>
+    <input type="time" id="day-time" value="08:00">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeOverlay('day-overlay')">닫기</button>
+      <button class="btn-primary"   onclick="saveDayChanges()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Day Detail Popup ── -->
+<div class="overlay hidden" id="detail-overlay">
+  <div class="modal detail-modal">
+    <div class="detail-header">
+      <div>
+        <div class="detail-date" id="detail-date"></div>
+        <div class="detail-sub"  id="detail-sub"></div>
+      </div>
+      <button class="detail-close-btn" onclick="closeOverlay('detail-overlay')" title="닫기">✕</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+    <div class="modal-actions" style="margin-top:14px; flex-shrink:0">
+      <button class="btn-secondary" onclick="closeOverlay('detail-overlay')">닫기</button>
+      <button class="btn-primary"   onclick="openDayEditFromDetail()">✏️ 편집</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════
+// Config
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://upqnxyllnenivehmallp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_o7KDz58nXdjLN7TwOw2Xhg_VBWzOccH';
+const BUCKET       = 'csv-data';
+const CSV_FILE     = 'pl_healthcare-data.csv';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════
+// SVG Icon Library
+// ═══════════════════════════════════════════════
+// Each returns an <svg> string
+function mkCircle(fill, content) {
+  return `<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="${fill}"/>${content}</svg>`;
+}
+function mkPill(fill1, fill2, label) {
+  return `<svg viewBox="0 0 36 36"><rect x="3" y="11" width="30" height="14" rx="7" fill="${fill1}"/><rect x="18" y="11" width="15" height="14" rx="0" fill="${fill2}"/><rect x="25" y="11" width="8" height="14" rx="7" fill="${fill2}"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="Arial">${label}</text></svg>`;
+}
+function mkCapsule(bg, label) {
+  return `<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="9" fill="${bg}"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold" font-family="Arial">${label}</text></svg>`;
+}
+function mkHex(fill, label) {
+  return `<svg viewBox="0 0 36 36"><polygon points="18,3 31,10.5 31,25.5 18,33 5,25.5 5,10.5" fill="${fill}"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold" font-family="Arial">${label}</text></svg>`;
+}
+function mkStar(fill, inner='#fff') {
+  return `<svg viewBox="0 0 36 36"><polygon points="18,3 22,14 34,14 24,21 28,33 18,26 8,33 12,21 2,14 14,14" fill="${fill}"/><circle cx="18" cy="18" r="4" fill="${inner}"/></svg>`;
+}
+function mkRect(fill, label) {
+  return `<svg viewBox="0 0 36 36"><rect x="4" y="4" width="28" height="28" rx="6" fill="${fill}"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold" font-family="Arial">${label}</text></svg>`;
+}
+
+const SUPP_ICONS = {
+  vitamin_c:    { label:'비타민C',    svg: mkPill('#FF6B35','#FF8C5A','Vit C') },
+  vitamin_d:    { label:'비타민D',    svg: mkPill('#FFB347','#FFD080','Vit D') },
+  vitamin_b12:  { label:'비타민B12',  svg: mkPill('#66BB6A','#A5D6A7','B12') },
+  vitamin_e:    { label:'비타민E',    svg: mkPill('#AB47BC','#CE93D8','Vit E') },
+  vitamin_a:    { label:'비타민A',    svg: mkPill('#EF5350','#EF9A9A','Vit A') },
+  omega3:       { label:'오메가3',    svg: `<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="9" fill="#2196F3"/><path d="M6 18 Q11 12 18 18 Q25 24 30 18" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/><text x="18" y="23" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold" font-family="Arial">ω-3</text></svg>` },
+  calcium:      { label:'칼슘',       svg: mkCapsule('#78909C','Ca') },
+  magnesium:    { label:'마그네슘',   svg: mkCapsule('#26A69A','Mg') },
+  zinc:         { label:'아연',       svg: mkCapsule('#7E57C2','Zn') },
+  iron:         { label:'철분',       svg: mkCapsule('#8D6E63','Fe') },
+  folic_acid:   { label:'엽산',       svg: mkHex('#F06292','B9') },
+  biotin:       { label:'비오틴',     svg: mkHex('#BA68C8','B7') },
+  probiotics:   { label:'유산균',     svg: `<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="14" fill="#A5D6A7"/><circle cx="12" cy="14" r="4.5" fill="#66BB6A"/><circle cx="24" cy="14" r="4.5" fill="#66BB6A"/><circle cx="18" cy="24" r="4.5" fill="#66BB6A"/></svg>` },
+  turmeric:     { label:'강황',       svg: mkCircle('#FDD835','<path d="M11 18 Q18 9 25 18 Q18 27 11 18Z" fill="#F9A825"/>') },
+  collagen:     { label:'콜라겐',     svg: mkCircle('#FFCCBC','<path d="M10 18 C12 11 16 9 18 14 C20 9 24 11 26 18 C24 25 20 27 18 22 C16 27 12 25 10 18Z" fill="#FF8A65"/>') },
+  // Power types (5)
+  creatine:     { label:'크레아틴',   svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#1565C0"/><polygon points="18,5 21,14 31,14 23,20 26,30 18,24 10,30 13,20 5,14 15,14" fill="#90CAF9"/></svg>` },
+  protein:      { label:'프로틴',     svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#B71C1C"/><text x="18" y="16" text-anchor="middle" fill="#EF9A9A" font-size="8" font-weight="bold" font-family="Arial">PRO</text><text x="18" y="27" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold" font-family="Arial">TEIN</text></svg>` },
+  preworkout:   { label:'프리워크아웃', svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#E65100"/><polygon points="18,5 22,15 33,15 24,22 27,33 18,27 9,33 12,22 3,15 14,15" fill="#FFD54F"/></svg>` },
+  bcaa:         { label:'BCAA',       svg: mkRect('#2E7D32','BCAA') },
+  beta_alanine: { label:'베타알라닌', svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#4A148C"/><text x="18" y="16" text-anchor="middle" fill="#CE93D8" font-size="9" font-weight="bold" font-family="Arial">β-ALA</text><text x="18" y="28" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold" font-family="Arial">NINE</text></svg>` },
+};
+
+const FIT_ICONS = {
+  squat:          { label:'스쿼트',      svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="6" r="4" fill="#1565C0"/><path d="M13 10 L9 22 L14 22 L12 30 L18 30 L24 30 L22 22 L27 22 L23 10 Z" fill="#1976D2"/></svg>` },
+  deadlift:       { label:'데드리프트',  svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="6" r="4" fill="#B71C1C"/><rect x="5" y="20" width="26" height="4" rx="2" fill="#C62828"/><rect x="3" y="15" width="5" height="13" rx="2.5" fill="#C62828"/><rect x="28" y="15" width="5" height="13" rx="2.5" fill="#C62828"/><line x1="14" y1="10" x2="14" y2="20" stroke="#C62828" stroke-width="2"/><line x1="22" y1="10" x2="22" y2="20" stroke="#C62828" stroke-width="2"/></svg>` },
+  bench_press:    { label:'벤치프레스',  svg: `<svg viewBox="0 0 36 36"><rect x="4" y="20" width="28" height="4" rx="2" fill="#2E7D32"/><rect x="2" y="15" width="5" height="13" rx="2.5" fill="#388E3C"/><rect x="29" y="15" width="5" height="13" rx="2.5" fill="#388E3C"/><circle cx="18" cy="8" r="4" fill="#1B5E20"/><line x1="14" y1="12" x2="14" y2="20" stroke="#388E3C" stroke-width="2"/><line x1="22" y1="12" x2="22" y2="20" stroke="#388E3C" stroke-width="2"/></svg>` },
+  pullup:         { label:'풀업',        svg: `<svg viewBox="0 0 36 36"><rect x="3" y="4" width="30" height="5" rx="2.5" fill="#4527A0"/><circle cx="18" cy="20" r="5" fill="#5E35B1"/><line x1="13" y1="9" x2="12" y2="14" stroke="#7E57C2" stroke-width="2"/><line x1="23" y1="9" x2="24" y2="14" stroke="#7E57C2" stroke-width="2"/><line x1="18" y1="25" x2="15" y2="33" stroke="#7E57C2" stroke-width="2"/><line x1="18" y1="25" x2="21" y2="33" stroke="#7E57C2" stroke-width="2"/></svg>` },
+  pushup:         { label:'푸시업',      svg: `<svg viewBox="0 0 36 36"><circle cx="10" cy="9" r="4" fill="#E65100"/><rect x="6" y="17" width="24" height="5" rx="2.5" fill="#F4511E"/><circle cx="5" cy="29" r="3.5" fill="#E64A19"/><circle cx="31" cy="29" r="3.5" fill="#E64A19"/><line x1="14" y1="13" x2="8" y2="17" stroke="#E64A19" stroke-width="2"/><line x1="14" y1="22" x2="8" y2="29" stroke="#E64A19" stroke-width="2"/><line x1="22" y1="22" x2="28" y2="29" stroke="#E64A19" stroke-width="2"/></svg>` },
+  shoulder_press: { label:'숄더프레스',  svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="8" r="4" fill="#006064"/><rect x="4" y="14" width="28" height="4" rx="2" fill="#00838F"/><rect x="2" y="10" width="5" height="12" rx="2.5" fill="#00838F"/><rect x="29" y="10" width="5" height="12" rx="2.5" fill="#00838F"/><line x1="14" y1="12" x2="14" y2="14" stroke="#00838F" stroke-width="2"/><line x1="22" y1="12" x2="22" y2="14" stroke="#00838F" stroke-width="2"/></svg>` },
+  bicep_curl:     { label:'바이셉컬',    svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="6" r="4" fill="#880E4F"/><path d="M14 10 L9 20 L14 20 L12 30 L18 30 L22 22 L20 18 L24 18 L22 10 Z" fill="#AD1457"/></svg>` },
+  tricep:         { label:'트라이셉',    svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="7" r="4" fill="#1A237E"/><path d="M14 11 L7 28 L13 28 L13 33 L23 33 L23 28 L29 28 L22 11 Z" fill="#283593"/></svg>` },
+  lateral_raise:  { label:'레터럴레이즈', svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="10" r="4" fill="#004D40"/><line x1="2" y1="20" x2="34" y2="20" stroke="#00695C" stroke-width="3"/><circle cx="3" cy="20" r="4" fill="#00695C"/><circle cx="33" cy="20" r="4" fill="#00695C"/><line x1="14" y1="14" x2="9" y2="20" stroke="#00695C" stroke-width="2"/><line x1="22" y1="14" x2="27" y2="20" stroke="#00695C" stroke-width="2"/></svg>` },
+  leg_press:      { label:'레그프레스',  svg: `<svg viewBox="0 0 36 36"><circle cx="9" cy="8" r="4" fill="#33691E"/><rect x="21" y="14" width="12" height="5" rx="2.5" fill="#558B2F"/><path d="M9 12 L16 20 L22 19" stroke="#558B2F" stroke-width="2.5" fill="none"/><line x1="9" y1="12" x2="7" y2="30" stroke="#558B2F" stroke-width="2"/><line x1="9" y1="12" x2="14" y2="30" stroke="#558B2F" stroke-width="2"/></svg>` },
+  plank:          { label:'플랭크',      svg: `<svg viewBox="0 0 36 36"><circle cx="8" cy="10" r="4" fill="#BF360C"/><rect x="5" y="15" width="26" height="6" rx="3" fill="#D84315"/><circle cx="5" cy="28" r="3.5" fill="#D84315"/><circle cx="31" cy="28" r="3.5" fill="#D84315"/><line x1="5" y1="24" x2="5" y2="28" stroke="#D84315" stroke-width="2"/><line x1="31" y1="24" x2="31" y2="28" stroke="#D84315" stroke-width="2"/></svg>` },
+  running:        { label:'달리기',      svg: `<svg viewBox="0 0 36 36"><circle cx="22" cy="5" r="4" fill="#1565C0"/><path d="M18 9 L13 16 L6 14 L8 21 L15 23 L17 18 L22 22 L26 33 L31 31 L26 19 L30 15 L24 13 L22 9 Z" fill="#1976D2"/></svg>` },
+  cycling:        { label:'사이클링',    svg: `<svg viewBox="0 0 36 36"><circle cx="7" cy="27" r="6" fill="none" stroke="#F57F17" stroke-width="2.2"/><circle cx="29" cy="27" r="6" fill="none" stroke="#F57F17" stroke-width="2.2"/><path d="M7 27 L18 13 L29 27" stroke="#F9A825" stroke-width="2.2" fill="none"/><circle cx="18" cy="13" r="3" fill="#F9A825"/><circle cx="20" cy="7" r="3.5" fill="#F57F17"/></svg>` },
+  swimming:       { label:'수영',        svg: `<svg viewBox="0 0 36 36"><circle cx="22" cy="7" r="4" fill="#0277BD"/><path d="M18 11 L6 22 L13 20 L18 24 L24 20 L31 24 L28 17 L24 15 Z" fill="#0288D1"/><path d="M3 29 Q10 24 17 29 Q24 34 31 29" stroke="#29B6F6" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>` },
+  jump_rope:      { label:'줄넘기',      svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="7" r="4" fill="#AD1457"/><path d="M10 13 Q2 18 4 26 Q6 34 12 30 Q17 27 18 20 Q19 13 24 13" stroke="#C2185B" stroke-width="2.2" fill="none" stroke-linecap="round"/><line x1="14" y1="11" x2="10" y2="13" stroke="#C2185B" stroke-width="2"/><line x1="22" y1="11" x2="24" y2="13" stroke="#C2185B" stroke-width="2"/></svg>` },
+  rowing:         { label:'로잉',        svg: `<svg viewBox="0 0 36 36"><circle cx="28" cy="7" r="4" fill="#37474F"/><path d="M3 20 Q17 15 33 20" stroke="#546E7A" stroke-width="2.5" fill="none"/><rect x="3" y="22" width="30" height="5" rx="2.5" fill="#607D8B"/><line x1="28" y1="11" x2="24" y2="22" stroke="#546E7A" stroke-width="2"/><line x1="20" y1="22" x2="8" y2="17" stroke="#546E7A" stroke-width="2"/></svg>` },
+  dips:           { label:'딥스',        svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="8" r="4" fill="#4E342E"/><rect x="3" y="13" width="5" height="16" rx="2.5" fill="#6D4C41"/><rect x="28" y="13" width="5" height="16" rx="2.5" fill="#6D4C41"/><line x1="3" y1="13" x2="33" y2="13" stroke="#6D4C41" stroke-width="2"/><line x1="14" y1="12" x2="7" y2="13" stroke="#6D4C41" stroke-width="2"/><line x1="22" y1="12" x2="29" y2="13" stroke="#6D4C41" stroke-width="2"/><line x1="18" y1="12" x2="15" y2="27" stroke="#6D4C41" stroke-width="2"/><line x1="18" y1="12" x2="21" y2="27" stroke="#6D4C41" stroke-width="2"/></svg>` },
+  lunge:          { label:'런지',        svg: `<svg viewBox="0 0 36 36"><circle cx="20" cy="5" r="4" fill="#1A237E"/><path d="M16 9 L13 18 L7 24 L10 29 L18 25 L20 18 L26 22 L29 33 L33 31 L28 19 L23 15 L21 9 Z" fill="#283593"/></svg>` },
+  burpee:         { label:'버피',        svg: `<svg viewBox="0 0 36 36"><circle cx="28" cy="5" r="4" fill="#B71C1C"/><path d="M24 9 L20 15 L13 13 L7 19 L9 25 L15 23 L18 28 L24 28 L28 21 L26 15 Z" fill="#C62828"/><circle cx="5" cy="33" r="3.5" fill="#C62828"/><circle cx="31" cy="33" r="3.5" fill="#C62828"/></svg>` },
+  stretching:     { label:'스트레칭',    svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="5" r="4" fill="#1B5E20"/><path d="M14 9 L5 15 L13 18 L18 12 L23 18 L31 15 L22 9 Z" fill="#2E7D32"/><line x1="18" y1="12" x2="15" y2="28" stroke="#388E3C" stroke-width="2"/><line x1="18" y1="12" x2="21" y2="28" stroke="#388E3C" stroke-width="2"/><line x1="15" y1="28" x2="9" y2="34" stroke="#388E3C" stroke-width="2"/><line x1="21" y1="28" x2="27" y2="34" stroke="#388E3C" stroke-width="2"/></svg>` },
+};
+
+// ═══════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════
+let appData = { supplements: [], fitness: [], records: [] };
+let viewOffset = 0;
+let addType = null;
+let rmType  = null;
+let selIcon = null;
+let selDay  = null;
+let rmSet   = new Set();
+
+// ═══════════════════════════════════════════════
+// Utilities
+// ═══════════════════════════════════════════════
+const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const esc  = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtDate = d => {
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+};
+const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+const fmt12 = t => {
+  if (!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  return `${String(h%12||12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+};
+function getThisMonday() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dow = today.getDay();
+  const diff = dow===0 ? -6 : 1-dow;
+  return addDays(today, diff);
+}
+function iconOf(type, key) {
+  const lib = type==='supplement' ? SUPP_ICONS : FIT_ICONS;
+  return (lib[key] || Object.values(lib)[0]).svg;
+}
+
+// ═══════════════════════════════════════════════
+// Supabase Load / Save
+// ═══════════════════════════════════════════════
+let saveTimer = null;
+function scheduleSave() {
+  setStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 1600);
+}
+
+async function doSave() {
+  try {
+    const blob = new Blob([JSON.stringify(appData)], { type: 'application/json' });
+    const { error } = await sb.storage.from(BUCKET).upload(CSV_FILE, blob, { upsert: true, contentType: 'application/json' });
+    if (error) throw error;
+    setStatus('saved');
+  } catch(e) {
+    console.error(e);
+    setStatus('error');
+  }
+}
+
+async function doLoad() {
+  setStatus('saving');
+  try {
+    const { data:{ publicUrl } } = sb.storage.from(BUCKET).getPublicUrl(CSV_FILE);
+    const res = await fetch(publicUrl + '?t=' + Date.now(), {
+      cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store' }
+    });
+    if (res.ok) {
+      const parsed = await res.json();
+      appData = { supplements:[], fitness:[], records:[], ...parsed };
+    }
+    setStatus('saved');
+  } catch(e) {
+    // File likely doesn't exist yet — start fresh
+    setStatus('saved');
+  }
+}
+
+function setStatus(s) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + s;
+  el.textContent = { saving:'저장 중...', saved:'저장됨', error:'저장 오류', idle:'로딩 중...' }[s] || '';
+}
+
+// ═══════════════════════════════════════════════
+// Render
+// ═══════════════════════════════════════════════
+function renderAll() { renderSupp(); renderFit(); renderCal(); }
+
+function renderSupp() {
+  const el = document.getElementById('supp-list');
+  if (!appData.supplements.length) {
+    el.innerHTML = '<div class="empty-hint">보조제를 추가하세요<br>+ 추가 버튼을 누르세요</div>';
+    return;
+  }
+  el.innerHTML = appData.supplements.map(s => `
+    <div class="item-card">
+      <div class="item-icon-wrap">${iconOf('supplement', s.iconKey)}</div>
+      <div class="item-info"><div class="item-name">${esc(s.name)}</div></div>
+    </div>`).join('');
+}
+
+function renderFit() {
+  const el = document.getElementById('fit-list');
+  if (!appData.fitness.length) {
+    el.innerHTML = '<div class="empty-hint">운동을 추가하세요<br>+ 추가 버튼을 누르세요</div>';
+    return;
+  }
+  el.innerHTML = appData.fitness.map(f => `
+    <div class="item-card">
+      <div class="item-icon-wrap">${iconOf('fitness', f.iconKey)}</div>
+      <div class="item-info">
+        <div class="item-name">${esc(f.name)}</div>
+        <div class="item-meta">${f.sets}×${f.reps}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCal() {
+  const today      = fmtDate(new Date());
+  const thisMonday = getThisMonday();
+  const viewStart  = addDays(thisMonday, -7 + viewOffset * 7);
+  const viewEnd    = addDays(viewStart, 27);
+
+  document.getElementById('cal-range').textContent =
+    `${viewStart.getMonth()+1}월 ${viewStart.getDate()}일 – ${viewEnd.getMonth()+1}월 ${viewEnd.getDate()}일`;
+
+  const weeksEl = document.getElementById('cal-weeks');
+  weeksEl.innerHTML = '';
+
+  for (let w = 0; w < 4; w++) {
+    const weekMon    = addDays(viewStart, w*7);
+    const weekMonStr = fmtDate(weekMon);
+    const isThisWeek = weekMonStr === fmtDate(thisMonday);
+
+    const weekEl = document.createElement('div');
+    weekEl.className = 'cal-week';
+
+    for (let d = 0; d < 7; d++) {
+      const day     = addDays(weekMon, d);
+      const dateStr = fmtDate(day);
+      const isToday = dateStr === today;
+      const isSat   = d === 5, isSun = d === 6;
+
+      const dayEl = document.createElement('div');
+      dayEl.className = 'cal-day' + (isThisWeek?' this-week':'') + (isToday?' today':'');
+
+      let numCls = 'day-num' + (isToday?' today-n':isSat?' sat-n':isSun?' sun-n':'');
+      dayEl.innerHTML = `<div class="${numCls}">${day.getDate()}</div><div class="day-entries"></div>`;
+
+      const entriesEl = dayEl.querySelector('.day-entries');
+      const recs = appData.records
+        .filter(r => r.date === dateStr)
+        .sort((a,b) => a.time.localeCompare(b.time));
+
+      recs.forEach(r => {
+        const e = document.createElement('div');
+        e.className = `d-entry type-${r.type}`;
+        e.innerHTML = `<span class="d-entry-icon">${iconOf(r.type, r.iconKey)}</span>
+          <span class="d-entry-text" title="${esc(r.itemName)} | ${fmt12(r.time)}">${esc(r.itemName)} | ${fmt12(r.time)}</span>`;
+        entriesEl.appendChild(e);
+      });
+
+      setupDayInteraction(dayEl, dateStr);
+      weekEl.appendChild(dayEl);
+    }
+    weeksEl.appendChild(weekEl);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Day Interaction
+//   Desktop : left-click → detail popup
+//             right-click → edit modal
+//   Touch   : tap         → detail popup
+//             long-press  → edit modal
+// ═══════════════════════════════════════════════
+function setupDayInteraction(el, dateStr) {
+  // ── Desktop ──────────────────────────────────
+  el.addEventListener('click', () => openDayDetail(dateStr));
+
+  el.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    openDayModal(dateStr);
+  });
+
+  // ── Touch ─────────────────────────────────────
+  let touchTimer = null;
+  let longFired  = false;
+
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();          // blocks synthetic click from firing after touchend
+    longFired = false;
+    el.classList.add('pressing');
+    touchTimer = setTimeout(() => {
+      longFired = true;
+      el.classList.remove('pressing');
+      openDayModal(dateStr);
+    }, 600);
+  }, { passive: false });
+
+  el.addEventListener('touchend', () => {
+    clearTimeout(touchTimer);
+    el.classList.remove('pressing');
+    if (!longFired) openDayDetail(dateStr);   // short tap
+    longFired = false;
+  });
+
+  el.addEventListener('touchcancel', () => {
+    clearTimeout(touchTimer);
+    longFired = false;
+    el.classList.remove('pressing');
+  });
+
+  el.addEventListener('touchmove', () => {
+    clearTimeout(touchTimer);
+    longFired = true;             // cancel the tap-open if finger moved
+    el.classList.remove('pressing');
+  }, { passive: true });
+}
+
+// ═══════════════════════════════════════════════
+// Day Detail Popup
+// ═══════════════════════════════════════════════
+const DAY_NAMES = ['일','월','화','수','목','금','토'];
+
+function openDayDetail(dateStr) {
+  selDay = dateStr;
+  const [y, m, d] = dateStr.split('-');
+  const dateObj = new Date(dateStr + 'T00:00:00');
+  const dayName = DAY_NAMES[dateObj.getDay()];
+  const isToday = dateStr === fmtDate(new Date());
+
+  document.getElementById('detail-date').textContent =
+    `${parseInt(m)}월 ${parseInt(d)}일`;
+  document.getElementById('detail-sub').textContent =
+    `${y}년 · ${dayName}요일${isToday ? ' · 오늘' : ''}`;
+
+  const dayRecs = appData.records
+    .filter(r => r.date === dateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const suppRecs = dayRecs.filter(r => r.type === 'supplement');
+  const fitRecs  = dayRecs.filter(r => r.type === 'fitness');
+
+  const body = document.getElementById('detail-body');
+  body.innerHTML = '';
+
+  if (!suppRecs.length && !fitRecs.length) {
+    body.innerHTML = '<div class="detail-empty">기록된 항목이 없습니다.<br>편집 버튼으로 항목을 추가하세요.</div>';
+  } else {
+    if (suppRecs.length) {
+      const h = document.createElement('div');
+      h.className = 'detail-section-title';
+      h.textContent = '💊 보조제';
+      body.appendChild(h);
+      suppRecs.forEach(r => body.appendChild(makeDetailItem(r)));
+    }
+    if (fitRecs.length) {
+      const h = document.createElement('div');
+      h.className = 'detail-section-title';
+      h.textContent = '🏋️ 피트니스';
+      body.appendChild(h);
+      fitRecs.forEach(r => body.appendChild(makeDetailItem(r)));
+    }
+  }
+
+  openOverlay('detail-overlay');
+}
+
+function makeDetailItem(rec) {
+  const el = document.createElement('div');
+  el.className = 'detail-item';
+  const meta = (rec.type === 'fitness' && rec.sets)
+    ? `<div class="detail-item-meta">${rec.sets}×${rec.reps}</div>` : '';
+  el.innerHTML = `
+    <div class="detail-item-icon">${iconOf(rec.type, rec.iconKey)}</div>
+    <div style="flex:1; min-width:0">
+      <div class="detail-item-name">${esc(rec.itemName)}</div>
+      ${meta}
+    </div>
+    <div class="detail-item-time">${fmt12(rec.time)}</div>`;
+  return el;
+}
+
+function openDayEditFromDetail() {
+  closeOverlay('detail-overlay');
+  if (selDay) openDayModal(selDay);
+}
+
+// ═══════════════════════════════════════════════
+// View Navigation
+// ═══════════════════════════════════════════════
+function shiftView(delta) {
+  if (delta === 0) { viewOffset = 0; }
+  else { viewOffset += delta; }
+  renderCal();
+}
+
+// ═══════════════════════════════════════════════
+// Overlays
+// ═══════════════════════════════════════════════
+function openOverlay(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeOverlay(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.querySelectorAll('.overlay').forEach(ov =>
+  ov.addEventListener('mousedown', e => { if (e.target===ov) closeOverlay(ov.id); })
+);
+
+// ═══════════════════════════════════════════════
+// Add Modal
+// ═══════════════════════════════════════════════
+function openAddModal(type) {
+  addType = type;
+  selIcon = null;
+  const isFit = type === 'fitness';
+  document.getElementById('add-title').textContent = isFit ? '운동 추가' : '보조제 추가';
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-sr-section').style.display = isFit ? '' : 'none';
+  if (isFit) { document.getElementById('add-sets').value='3'; document.getElementById('add-reps').value='15'; }
+
+  const lib  = isFit ? FIT_ICONS : SUPP_ICONS;
+  const grid = document.getElementById('add-icon-grid');
+  grid.innerHTML = '';
+  Object.entries(lib).forEach(([key,ico]) => {
+    const d = document.createElement('div');
+    d.className = 'icon-opt';
+    d.dataset.key = key;
+    d.innerHTML = ico.svg + `<span>${ico.label}</span>`;
+    d.addEventListener('click', () => {
+      grid.querySelectorAll('.icon-opt').forEach(o => o.classList.remove('sel'));
+      d.classList.add('sel');
+      selIcon = key;
+    });
+    grid.appendChild(d);
+  });
+
+  openOverlay('add-overlay');
+  setTimeout(() => document.getElementById('add-name').focus(), 80);
+}
+
+function confirmAdd() {
+  const name = document.getElementById('add-name').value.trim();
+  if (!name)    { alert('이름을 입력하세요.'); return; }
+  if (!selIcon) { alert('아이콘을 선택하세요.'); return; }
+
+  if (addType === 'supplement') {
+    appData.supplements.push({ id: uid(), name, iconKey: selIcon });
+  } else {
+    const sets = Math.max(1, parseInt(document.getElementById('add-sets').value)||3);
+    const reps = Math.max(1, parseInt(document.getElementById('add-reps').value)||15);
+    appData.fitness.push({ id: uid(), name, iconKey: selIcon, sets, reps });
+  }
+  closeOverlay('add-overlay');
+  renderAll();
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════
+// Remove Modal
+// ═══════════════════════════════════════════════
+function openRemoveModal(type) {
+  rmType = type;
+  rmSet.clear();
+  const isFit = type === 'fitness';
+  document.getElementById('rm-title').textContent = isFit ? '운동 제거' : '보조제 제거';
+
+  const items = isFit ? appData.fitness : appData.supplements;
+  const list  = document.getElementById('rm-list');
+
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-hint">목록이 비어 있습니다</div>';
+    openOverlay('rm-overlay');
+    return;
+  }
+
+  list.innerHTML = '';
+  items.forEach(item => {
+    const d = document.createElement('div');
+    d.className = 'rm-item';
+    d.dataset.id = item.id;
+    const meta = item.sets ? ` <span style="color:#aaa;font-size:0.7rem">${item.sets}×${item.reps}</span>` : '';
+    d.innerHTML = `<div class="item-icon-wrap" style="width:28px;height:28px">${iconOf(type, item.iconKey)}</div>
+      <div class="rm-item-name">${esc(item.name)}${meta}</div>
+      <div class="rm-chk">☐</div>`;
+    d.addEventListener('click', () => {
+      if (rmSet.has(item.id)) {
+        rmSet.delete(item.id);
+        d.classList.remove('sel');
+        d.querySelector('.rm-chk').textContent = '☐';
+      } else {
+        rmSet.add(item.id);
+        d.classList.add('sel');
+        d.querySelector('.rm-chk').textContent = '☑';
+      }
+    });
+    list.appendChild(d);
+  });
+
+  openOverlay('rm-overlay');
+}
+
+function confirmRemove() {
+  if (!rmSet.size) { closeOverlay('rm-overlay'); return; }
+  if (rmType === 'supplement') {
+    appData.supplements = appData.supplements.filter(s => !rmSet.has(s.id));
+    appData.records = appData.records.filter(r => !(r.type==='supplement' && rmSet.has(r.itemId)));
+  } else {
+    appData.fitness = appData.fitness.filter(f => !rmSet.has(f.id));
+    appData.records = appData.records.filter(r => !(r.type==='fitness' && rmSet.has(r.itemId)));
+  }
+  rmSet.clear();
+  closeOverlay('rm-overlay');
+  renderAll();
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════
+// Day Modal
+// ═══════════════════════════════════════════════
+function openDayModal(dateStr) {
+  selDay = dateStr;
+  const [y,m,d] = dateStr.split('-');
+  document.getElementById('day-title').textContent = `${parseInt(m)}월 ${parseInt(d)}일 (${y})`;
+
+  const now = new Date();
+  document.getElementById('day-time').value =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const dayRecs = appData.records.filter(r => r.date === dateStr);
+
+  // Supplements
+  const suppEl = document.getElementById('day-supp-items');
+  suppEl.innerHTML = '';
+  if (!appData.supplements.length) {
+    suppEl.innerHTML = '<div style="color:#bbb;font-size:0.76rem;padding:6px 8px;font-family:\'Noto Sans KR\',sans-serif">보조제 목록이 없습니다</div>';
+  } else {
+    appData.supplements.forEach(s => {
+      const rec = dayRecs.find(r => r.type==='supplement' && r.itemId===s.id);
+      suppEl.appendChild(makeDayItem(s, 'supplement', rec));
+    });
+  }
+
+  // Fitness
+  const fitEl = document.getElementById('day-fit-items');
+  fitEl.innerHTML = '';
+  if (!appData.fitness.length) {
+    fitEl.innerHTML = '<div style="color:#bbb;font-size:0.76rem;padding:6px 8px;font-family:\'Noto Sans KR\',sans-serif">운동 목록이 없습니다</div>';
+  } else {
+    appData.fitness.forEach(f => {
+      const rec = dayRecs.find(r => r.type==='fitness' && r.itemId===f.id);
+      fitEl.appendChild(makeDayItem(f, 'fitness', rec));
+    });
+  }
+
+  openOverlay('day-overlay');
+}
+
+function makeDayItem(item, type, existRec) {
+  const on = !!existRec;
+  const el = document.createElement('div');
+  el.className = 'day-item';
+  el.dataset.itemId  = item.id;
+  el.dataset.type    = type;
+  el.dataset.recId   = existRec ? existRec.id : '';
+
+  const meta = type==='fitness' ? `<div class="day-item-meta">${item.sets}×${item.reps}</div>` : '';
+  el.innerHTML = `
+    <div class="day-item-icon">${iconOf(type, item.iconKey)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="day-item-name">${esc(item.name)}</div>${meta}
+    </div>
+    <div class="check-circle ${on?'on':''}">${on?'✓':''}</div>`;
+
+  const circle = el.querySelector('.check-circle');
+  el.addEventListener('click', () => {
+    const wasOn = circle.classList.contains('on');
+    circle.classList.toggle('on', !wasOn);
+    circle.textContent = !wasOn ? '✓' : '';
+  });
+  return el;
+}
+
+function saveDayChanges() {
+  if (!selDay) return;
+  const timeVal = document.getElementById('day-time').value || '08:00';
+
+  function processItems(containerEl, type, itemsArr) {
+    containerEl.querySelectorAll('.day-item').forEach(el => {
+      const itemId = el.dataset.itemId;
+      const recId  = el.dataset.recId;
+      const isOn   = el.querySelector('.check-circle').classList.contains('on');
+      if (isOn && !recId) {
+        const item = itemsArr.find(x => x.id === itemId);
+        if (item) {
+          const rec = { id:uid(), date:selDay, time:timeVal, type, itemId:item.id, itemName:item.name, iconKey:item.iconKey };
+          if (type==='fitness') { rec.sets=item.sets; rec.reps=item.reps; }
+          appData.records.push(rec);
+        }
+      } else if (!isOn && recId) {
+        appData.records = appData.records.filter(r => r.id !== recId);
+      }
+    });
+  }
+
+  processItems(document.getElementById('day-supp-items'), 'supplement', appData.supplements);
+  processItems(document.getElementById('day-fit-items'),  'fitness',    appData.fitness);
+
+  closeOverlay('day-overlay');
+  renderAll();
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════
+// Keyboard
+// ═══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['add-overlay','rm-overlay','day-overlay','detail-overlay'].forEach(closeOverlay);
+  }
+  if (e.key === 'Enter') {
+    if (!document.getElementById('add-overlay').classList.contains('hidden')) confirmAdd();
+    if (!document.getElementById('day-overlay').classList.contains('hidden'))  saveDayChanges();
+  }
+});
+
+// ═══════════════════════════════════════════════
+// Boot
+// ═══════════════════════════════════════════════
+(async () => {
+  await doLoad();
+  renderAll();
+})();
+</script>
+</body>
+</html>
