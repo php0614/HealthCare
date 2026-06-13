@@ -1088,12 +1088,12 @@ function muscleDiagram(primaryArr, secondaryArr) {
 
 // ═══════════════════════════════════════════════
 // Seed Catalog (auto-added once)
-//   recTime  = 권장 시간 (자동 배정; 복용 기록 시 ±2시간 내 조절 가능)
+//   recTime  = 권장 시간 (자동 배정; 복용 기록 시 ±timeSpan 내 조절 가능, 기본 3시간)
 //   perWeek  = 주당 권장 복용 횟수
 // ═══════════════════════════════════════════════
 const SUPP_SEED = [
   { name:"Lion's Mane (500mg)",              iconKey:'lions_mane',      dose:'500mg',  perWeek:7, recTime:'09:00', recLabel:'아침 식후', note:'인지력·집중력·신경 건강 지원. 아침 식사 후 복용을 권장합니다. 꾸준히 매일.' },
-  { name:"L-Theanine (200mg)",               iconKey:'l_theanine',      dose:'200mg',  perWeek:7, recTime:'21:00', recLabel:'취침 전',  note:'이완·수면 질 개선. 취침 약 1시간 전 복용. (집중용으로는 아침 카페인과 함께도 가능)' },
+  { name:"L-Theanine (200mg)",               iconKey:'l_theanine',      dose:'200mg',  perWeek:7, recTime:'13:00', recLabel:'오후',     note:'이완·수면 질 개선. 취침 약 1시간 전 복용. (집중용으로는 아침 카페인과 함께도 가능)' },
   { name:"Collagen Complex (powder)",        iconKey:'collagen',        dose:'분말',   perWeek:7, recTime:'09:00', recLabel:'아침 공복', note:'피부·관절·결합조직 지원. 아침 공복에 비타민C와 함께 물·음료에 타서 복용.' },
   { name:"Saffron (88.5mg Extract)",         iconKey:'saffron',         dose:'88.5mg', perWeek:7, recTime:'20:00', recLabel:'저녁 식후', note:'기분·정서 안정 지원. 매일 일정한 시간(저녁 식후)에 꾸준히 복용.' },
   { name:"Full Spectrum Mineral Caps",       iconKey:'mineral_complex', dose:'캡슐',   perWeek:7, recTime:'19:00', recLabel:'저녁 식후', note:'종합 미네랄. 저녁 식사와 함께 복용 시 흡수가 좋습니다. (칼슘·마그네슘 등 포함)' },
@@ -1206,12 +1206,19 @@ function runSeedV2() {
   });
 }
 
+// V3: update L-Theanine default time 21:00 → 16:00, label '취침 전' → '오후'.
+function runSeedV3() {
+  const s = appData.supplements.find(x => x.name === 'L-Theanine (200mg)');
+  if (s) { s.recTime = '13:00'; s.recLabel = '오후'; }
+}
+
 // Run any pending one-time migrations, then stamp the current version.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 function runMigrations() {
   const v = appData.seedVersion || 0;
   if (v < 1) runSeedV1();
   if (v < 2) runSeedV2();
+  if (v < 3) runSeedV3();
   const pending = v < SEED_VERSION;
   appData.seedVersion = SEED_VERSION;
   return pending;
@@ -1315,16 +1322,51 @@ function openSuppInfo(id) {
   document.getElementById('info-name').textContent = s.name;
   document.getElementById('info-dose').textContent = s.dose ? `용량 ${s.dose}` : '';
 
+  const span    = s.timeSpan || 180;
+  const spanHr  = Math.round(span / 60);
   const freqTxt = s.perWeek ? (s.perWeek >= 7 ? '매일 (주 7회)' : `주 ${s.perWeek}회`) : '—';
   const timeTxt = s.recTime ? `${s.recLabel ? esc(s.recLabel)+' · ' : ''}${fmt12(s.recTime)}` : '—';
   const rangeTxt = s.recTime
-    ? `${fmt12(minToTime(timeToMin(s.recTime)-180))} ~ ${fmt12(minToTime(timeToMin(s.recTime)+180))}` : '';
+    ? `${fmt12(minToTime(timeToMin(s.recTime)-span))} ~ ${fmt12(minToTime(timeToMin(s.recTime)+span))}` : '';
 
   document.getElementById('info-body').innerHTML = `
     <div class="info-row"><span class="info-k">권장 빈도</span><span class="info-v">${freqTxt}</span></div>
     <div class="info-row"><span class="info-k">권장 시간대</span><span class="info-v">${timeTxt}</span></div>
-    ${rangeTxt?`<div class="info-row"><span class="info-k">조절 가능 범위</span><span class="info-v">${rangeTxt}</span></div>`:''}
-    ${s.note?`<div class="info-note">${esc(s.note)}</div>`:''}`;
+    ${rangeTxt ? `<div class="info-row"><span class="info-k">조절 가능 범위</span><span class="info-v" id="info-range-val">${rangeTxt}</span></div>` : ''}
+    ${s.recTime ? `
+    <div class="info-row" style="align-items:center">
+      <span class="info-k">조절 범위</span>
+      <span class="info-v">
+        <div class="time-stepper" id="info-span-stepper" data-span="${spanHr}">
+          <button type="button" class="step-btn" data-dir="-1" aria-label="범위 줄이기" ${spanHr<=1?'disabled':''}>−</button>
+          <span class="time-val" id="info-span-val" style="min-width:52px">±${spanHr}시간</span>
+          <button type="button" class="step-btn" data-dir="1" aria-label="범위 늘리기" ${spanHr>=6?'disabled':''}>+</button>
+        </div>
+      </span>
+    </div>` : ''}
+    ${s.note ? `<div class="info-note">${esc(s.note)}</div>` : ''}`;
+
+  if (s.recTime) {
+    const stepper  = document.getElementById('info-span-stepper');
+    const valSpan  = document.getElementById('info-span-val');
+    const rangeVal = document.getElementById('info-range-val');
+    stepper.querySelectorAll('.step-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        let hr = +stepper.dataset.span + +btn.dataset.dir;
+        hr = Math.max(1, Math.min(6, hr));
+        stepper.dataset.span = hr;
+        valSpan.textContent = `±${hr}시간`;
+        stepper.querySelector('[data-dir="-1"]').disabled = hr <= 1;
+        stepper.querySelector('[data-dir="1"]').disabled  = hr >= 6;
+        const newSpan = hr * 60;
+        if (rangeVal) rangeVal.textContent =
+          `${fmt12(minToTime(timeToMin(s.recTime)-newSpan))} ~ ${fmt12(minToTime(timeToMin(s.recTime)+newSpan))}`;
+        s.timeSpan = newSpan;
+        scheduleSave();
+      });
+    });
+  }
 
   openOverlay('info-overlay');
 }
@@ -1772,20 +1814,21 @@ function makeDayItem(item, type, existRec) {
   else if (item.dose || item.recLabel)
     meta = `<div class="day-item-meta">${esc([item.dose, item.recLabel].filter(Boolean).join(' · '))}</div>`;
 
-  // recommended time → auto-filled; adjustable in 15-min steps within ±3h (supplements only)
+  // recommended time → auto-filled; adjustable in 15-min steps within ±span (supplements only)
   const recTime = type === 'supplement' ? (item.recTime || '') : '';
   el.dataset.recTime = recTime;
   const defTime = existRec ? existRec.time : (recTime || (type === 'fitness' ? '18:00' : '09:00'));
 
-  // step bounds
+  // step bounds — span comes from per-supplement timeSpan (default 3h)
+  const span = recTime ? (item.timeSpan || 180) : 0;
   let lo, hi;
-  if (recTime) { lo = timeToMin(recTime) - 180; hi = timeToMin(recTime) + 180; }
+  if (recTime) { lo = timeToMin(recTime) - span; hi = timeToMin(recTime) + span; }
   else         { lo = 0; hi = 1425; }                       // free range, 23:45 max
   lo = Math.ceil(Math.max(0, lo) / 15) * 15;                // snap bounds to 15-min grid
   hi = Math.floor(Math.min(1439, hi) / 15) * 15;
 
   const hint = recTime
-    ? `<span class="time-hint">권장 ${fmt12(recTime)} · ±3시간 (15분 단위)</span>`
+    ? `<span class="time-hint">권장 ${fmt12(recTime)} · ±${Math.round(span/60)}시간 (15분 단위)</span>`
     : `<span class="time-hint">15분 단위</span>`;
 
   el.innerHTML = `
@@ -1852,7 +1895,10 @@ function saveDayChanges() {
       const stepper = el.querySelector('.time-stepper');
 
       let time = (stepper && stepper.dataset.time) || recTime || '09:00';
-      if (recTime) time = clampTime(time, recTime, 180);   // enforce ±3h
+      if (recTime) {
+        const spanItem = itemsArr.find(x => x.id === itemId);
+        time = clampTime(time, recTime, spanItem ? (spanItem.timeSpan || 180) : 180);
+      }
 
       if (isOn) {
         const item = itemsArr.find(x => x.id === itemId);

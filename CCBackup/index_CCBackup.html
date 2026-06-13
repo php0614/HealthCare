@@ -405,6 +405,43 @@
       font-family: "Noto Sans KR", sans-serif;
     }
 
+    /* ── Delete button inside info popup (below 확인) ── */
+    .btn-delete {
+      flex: 1; padding: 9px;
+      background: #fff; color: var(--red);
+      border: 1.5px solid var(--red); border-radius: 9px;
+      font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.12s, color 0.12s;
+    }
+    .btn-delete:hover { background: var(--red); color: #fff; }
+
+    /* ── Muscle diagram (fitness info popup) ── */
+    .muscle-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 10px 0 4px;
+    }
+    .muscle-wrap svg { max-width: 100%; height: auto; }
+    .muscle-tags {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin: 8px 0 2px;
+    }
+    .muscle-tag {
+      font-size: 0.74rem; font-weight: 600;
+      padding: 3px 9px; border-radius: 20px;
+      font-family: "Noto Sans KR", sans-serif;
+    }
+    .muscle-tag.primary   { background: #fdecea; color: var(--red); }
+    .muscle-tag.secondary { background: #eef1f6; color: #5b6473; }
+    .muscle-legend {
+      display: flex; gap: 14px; justify-content: center;
+      font-size: 0.68rem; color: var(--text-muted);
+      margin-top: 2px; font-family: "Noto Sans KR", sans-serif;
+    }
+    .muscle-legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .lg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
     /* ── Per-item time inside Day modal ── */
     .day-item-body { flex: 1; min-width: 0; }
     .day-item-time-wrap {
@@ -808,9 +845,9 @@
   </div>
 </div>
 
-<!-- ── Supplement Info Popup (right-click / long-press) ── -->
+<!-- ── Info Popup (보조제 / 피트니스 · right-click / long-press) ── -->
 <div class="overlay hidden" id="info-overlay">
-  <div class="modal" style="width:340px">
+  <div class="modal" style="width:360px">
     <div class="detail-header" style="border-bottom:none; padding-bottom:6px; margin-bottom:2px">
       <div>
         <div class="detail-date" id="info-name" style="font-size:1.2rem"></div>
@@ -818,9 +855,10 @@
       </div>
       <button class="detail-close-btn" onclick="closeOverlay('info-overlay')" title="닫기">✕</button>
     </div>
-    <div id="info-body"></div>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="closeOverlay('info-overlay')">확인</button>
+    <div id="info-body" style="flex:1; min-height:0; overflow-y:auto"></div>
+    <div class="modal-actions" style="flex-direction:column; gap:8px">
+      <button class="btn-primary" style="width:100%" onclick="closeOverlay('info-overlay')">확인</button>
+      <button class="btn-delete"  style="width:100%" onclick="deleteInfoItem()">🗑 이 항목 삭제</button>
     </div>
   </div>
 </div>
@@ -937,6 +975,118 @@ const FIT_ICONS = {
 };
 
 // ═══════════════════════════════════════════════
+// Fitness Info — target muscles + 2D body diagram
+// ═══════════════════════════════════════════════
+// Diagram muscle keys:
+//   front: delts, chest, biceps, forearms, abs, quads
+//   back : traps, lats, triceps, lowerback, glutes, hams, calves
+// Each exercise: { muscles:[korean labels], primary:[keys], secondary:[keys], note }
+const FIT_INFO = {
+  squat:          { muscles:['대퇴사두','둔근','햄스트링','코어'], primary:['quads','glutes'], secondary:['hams','abs'], note:'하체 전반을 키우는 대표 운동. 허벅지 앞쪽(대퇴사두)과 엉덩이(둔근)를 주로 단련하고 코어로 균형을 잡습니다.' },
+  deadlift:       { muscles:['척추기립근','둔근','햄스트링','승모근'], primary:['lowerback','glutes','hams'], secondary:['traps','forearms'], note:'엉덩이·허벅지 뒤·등 아래를 통째로 키우는 전신 후면 운동. 허리를 곧게 펴고 들어올립니다.' },
+  bench_press:    { muscles:['가슴','삼두','어깨앞'], primary:['chest'], secondary:['triceps','delts'], note:'가슴(대흉근)을 키우는 대표 상체 운동. 삼두와 어깨 앞쪽도 함께 발달합니다.' },
+  chest_press:    { muscles:['가슴','삼두','어깨앞'], primary:['chest'], secondary:['triceps','delts'], note:'머신으로 안정적으로 가슴(대흉근)을 키우는 운동. 초보자도 안전하게 가슴을 자극합니다.' },
+  pec_fly:        { muscles:['가슴','어깨앞'], primary:['chest'], secondary:['delts'], note:'팔을 벌렸다 모으며 가슴 안쪽(대흉근)을 집중적으로 늘리고 키우는 고립 운동.' },
+  pushup:         { muscles:['가슴','삼두','어깨','코어'], primary:['chest'], secondary:['triceps','delts','abs'], note:'맨몸으로 가슴·삼두·어깨를 함께 키우는 운동. 코어로 몸을 일자로 버팁니다.' },
+  pullup:         { muscles:['광배근','이두','승모근'], primary:['lats'], secondary:['biceps','traps'], note:'매달려 올라가며 등 넓이를 만드는 광배근 운동. 이두와 승모근도 함께 씁니다.' },
+  lat_pulldown:   { muscles:['광배근','이두'], primary:['lats'], secondary:['biceps'], note:'바를 끌어내리며 등 넓이(광배근)를 키우는 운동. 풀업의 머신 버전입니다.' },
+  seated_row:     { muscles:['광배근','승모근','이두'], primary:['lats','traps'], secondary:['biceps'], note:'당겨오며 등 두께(광배근·승모근)를 키우는 운동. 자세 교정에도 좋습니다.' },
+  shoulder_press: { muscles:['어깨','삼두'], primary:['delts'], secondary:['triceps'], note:'머리 위로 밀어 올리며 어깨(삼각근)를 키우는 운동. 삼두도 함께 발달합니다.' },
+  lateral_raise:  { muscles:['어깨 측면'], primary:['delts'], secondary:[], note:'팔을 옆으로 들어 어깨 측면(측면 삼각근)을 고립해 키우는 운동. 어깨 너비를 만듭니다.' },
+  bicep_curl:     { muscles:['이두','전완'], primary:['biceps'], secondary:['forearms'], note:'팔을 굽혀 앞쪽 알통(이두근)을 키우는 대표 운동. 전완도 함께 씁니다.' },
+  tricep:         { muscles:['삼두'], primary:['triceps'], secondary:[], note:'팔을 펴며 팔 뒤쪽(삼두근)을 키우는 운동. 팔뚝을 두껍게 만듭니다.' },
+  dips:           { muscles:['삼두','가슴','어깨'], primary:['triceps','chest'], secondary:['delts'], note:'몸을 내렸다 밀어 올려 삼두와 가슴 아래를 키우는 운동.' },
+  leg_press:      { muscles:['대퇴사두','둔근','햄스트링'], primary:['quads','glutes'], secondary:['hams'], note:'머신에 앉아 다리로 밀어 하체(대퇴사두·둔근)를 안전하게 키우는 운동.' },
+  lunge:          { muscles:['대퇴사두','둔근','햄스트링'], primary:['quads','glutes'], secondary:['hams'], note:'한 발씩 내딛으며 허벅지와 엉덩이를 키우고 균형감을 기르는 운동.' },
+  calf_raise:     { muscles:['종아리'], primary:['calves'], secondary:[], note:'발뒤꿈치를 들어 종아리(비복근)를 키우는 운동. 발목 안정성에도 좋습니다.' },
+  plank:          { muscles:['복근','코어','어깨'], primary:['abs'], secondary:['lowerback','delts'], note:'버티며 복근과 코어 전체를 단련하는 운동. 허리 보호와 자세에 도움이 됩니다.' },
+  burpee:         { muscles:['전신','가슴','하체','코어'], primary:['chest','quads','abs'], secondary:['delts','calves'], note:'점프·푸시업·스쿼트가 합쳐진 전신 운동. 근력과 심폐지구력을 동시에 키웁니다.' },
+  running:        { muscles:['하체','종아리','심폐'], primary:['quads','hams','calves'], secondary:['glutes'], note:'대표 유산소 운동. 하체 지구력과 심폐 능력을 키우고 체지방을 태웁니다.' },
+  cycling:        { muscles:['대퇴사두','둔근','종아리'], primary:['quads'], secondary:['glutes','calves'], note:'무릎 부담이 적은 유산소 운동. 허벅지(대퇴사두)와 심폐를 키웁니다.' },
+  swimming:       { muscles:['광배근','어깨','가슴','전신'], primary:['lats','delts'], secondary:['chest'], note:'관절 부담 없이 전신을 고루 쓰는 유산소 운동. 등·어깨가 특히 발달합니다.' },
+  rowing:         { muscles:['광배근','하체','이두','코어'], primary:['lats','quads'], secondary:['biceps','glutes'], note:'당기고 미는 동작으로 등·하체를 함께 쓰는 전신 유산소 운동.' },
+  jump_rope:      { muscles:['종아리','하체','심폐'], primary:['calves'], secondary:['quads'], note:'줄을 넘으며 종아리와 심폐 지구력을 키우는 유산소 운동.' },
+  stretching:     { muscles:['전신 유연성'], primary:[], secondary:['quads','hams','delts','lats'], note:'근육을 늘려 유연성과 관절 가동 범위를 넓히는 운동. 부상 예방과 회복에 좋습니다.' },
+};
+
+// Korean labels for the diagram legend / fallback
+const MUSCLE_KO = {
+  delts:'어깨', chest:'가슴', biceps:'이두', forearms:'전완', abs:'복근', quads:'대퇴사두',
+  traps:'승모근', lats:'광배근', triceps:'삼두', lowerback:'허리', glutes:'둔근', hams:'햄스트링', calves:'종아리',
+};
+
+// Build a simple 2D front/back body, highlighting target muscles.
+function muscleDiagram(primaryArr, secondaryArr) {
+  const P = new Set(primaryArr || []), S = new Set(secondaryArr || []);
+  const c = k => P.has(k) ? '#e74c3c' : (S.has(k) ? '#f6b3ab' : '#dbe1ea');
+  const SK = '#eef1f6', ST = '#c4ccd8';
+  // FRONT figure centered at x=58 ; BACK figure centered at x=172
+  return `
+  <svg viewBox="0 0 230 196" width="230" height="196" font-family="'Noto Sans KR',sans-serif">
+    <!-- ===== FRONT ===== -->
+    <g>
+      <circle cx="58" cy="18" r="9" fill="${SK}" stroke="${ST}"/>
+      <rect x="53" y="26" width="10" height="6" fill="${SK}"/>
+      <!-- delts -->
+      <ellipse cx="36" cy="42" rx="9" ry="7" fill="${c('delts')}" stroke="${ST}"/>
+      <ellipse cx="80" cy="42" rx="9" ry="7" fill="${c('delts')}" stroke="${ST}"/>
+      <!-- chest -->
+      <rect x="43" y="38" width="13" height="14" rx="5" fill="${c('chest')}" stroke="${ST}"/>
+      <rect x="60" y="38" width="13" height="14" rx="5" fill="${c('chest')}" stroke="${ST}"/>
+      <!-- biceps -->
+      <ellipse cx="30" cy="60" rx="6" ry="11" fill="${c('biceps')}" stroke="${ST}"/>
+      <ellipse cx="86" cy="60" rx="6" ry="11" fill="${c('biceps')}" stroke="${ST}"/>
+      <!-- forearms -->
+      <ellipse cx="25" cy="82" rx="5" ry="11" fill="${c('forearms')}" stroke="${ST}"/>
+      <ellipse cx="91" cy="82" rx="5" ry="11" fill="${c('forearms')}" stroke="${ST}"/>
+      <!-- abs -->
+      <rect x="48" y="54" width="20" height="28" rx="4" fill="${c('abs')}" stroke="${ST}"/>
+      <line x1="58" y1="56" x2="58" y2="80" stroke="${ST}" stroke-width="0.8"/>
+      <line x1="49" y1="63" x2="67" y2="63" stroke="${ST}" stroke-width="0.8"/>
+      <line x1="49" y1="71" x2="67" y2="71" stroke="${ST}" stroke-width="0.8"/>
+      <!-- quads -->
+      <rect x="46" y="86" width="10" height="30" rx="5" fill="${c('quads')}" stroke="${ST}"/>
+      <rect x="60" y="86" width="10" height="30" rx="5" fill="${c('quads')}" stroke="${ST}"/>
+      <!-- shins (neutral) -->
+      <rect x="47" y="120" width="8" height="26" rx="4" fill="${SK}" stroke="${ST}"/>
+      <rect x="61" y="120" width="8" height="26" rx="4" fill="${SK}" stroke="${ST}"/>
+      <text x="58" y="162" text-anchor="middle" font-size="9" fill="#6b7280">앞</text>
+    </g>
+    <!-- ===== BACK ===== -->
+    <g>
+      <circle cx="172" cy="18" r="9" fill="${SK}" stroke="${ST}"/>
+      <rect x="167" y="26" width="10" height="6" fill="${SK}"/>
+      <!-- rear delts -->
+      <ellipse cx="150" cy="42" rx="9" ry="7" fill="${c('delts')}" stroke="${ST}"/>
+      <ellipse cx="194" cy="42" rx="9" ry="7" fill="${c('delts')}" stroke="${ST}"/>
+      <!-- traps -->
+      <polygon points="172,33 186,40 172,54 158,40" fill="${c('traps')}" stroke="${ST}"/>
+      <!-- triceps -->
+      <ellipse cx="144" cy="60" rx="6" ry="11" fill="${c('triceps')}" stroke="${ST}"/>
+      <ellipse cx="200" cy="60" rx="6" ry="11" fill="${c('triceps')}" stroke="${ST}"/>
+      <!-- forearms (back) -->
+      <ellipse cx="139" cy="82" rx="5" ry="11" fill="${c('forearms')}" stroke="${ST}"/>
+      <ellipse cx="205" cy="82" rx="5" ry="11" fill="${c('forearms')}" stroke="${ST}"/>
+      <!-- lats -->
+      <polygon points="162,52 172,56 168,76 158,70" fill="${c('lats')}" stroke="${ST}"/>
+      <polygon points="182,52 172,56 176,76 186,70" fill="${c('lats')}" stroke="${ST}"/>
+      <!-- lower back -->
+      <rect x="164" y="76" width="16" height="10" rx="3" fill="${c('lowerback')}" stroke="${ST}"/>
+      <!-- glutes -->
+      <rect x="161" y="88" width="11" height="13" rx="5" fill="${c('glutes')}" stroke="${ST}"/>
+      <rect x="172" y="88" width="11" height="13" rx="5" fill="${c('glutes')}" stroke="${ST}"/>
+      <!-- hamstrings -->
+      <rect x="160" y="103" width="10" height="22" rx="5" fill="${c('hams')}" stroke="${ST}"/>
+      <rect x="174" y="103" width="10" height="22" rx="5" fill="${c('hams')}" stroke="${ST}"/>
+      <!-- calves -->
+      <rect x="161" y="128" width="8" height="20" rx="4" fill="${c('calves')}" stroke="${ST}"/>
+      <rect x="175" y="128" width="8" height="20" rx="4" fill="${c('calves')}" stroke="${ST}"/>
+      <text x="172" y="162" text-anchor="middle" font-size="9" fill="#6b7280">뒤</text>
+    </g>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════════
 // Seed Catalog (auto-added once)
 //   recTime  = 권장 시간 (자동 배정; 복용 기록 시 ±2시간 내 조절 가능)
 //   perWeek  = 주당 권장 복용 횟수
@@ -974,6 +1124,7 @@ let rmType  = null;
 let selIcon = null;
 let selDay  = null;
 let rmSet   = new Set();
+let infoCtx = null;   // { type:'supplement'|'fitness', id } — item shown in info popup
 
 // ═══════════════════════════════════════════════
 // Utilities
@@ -1160,6 +1311,7 @@ function attachSuppCardHandlers() {
 function openSuppInfo(id) {
   const s = appData.supplements.find(x => x.id === id);
   if (!s) return;
+  infoCtx = { type: 'supplement', id };
   document.getElementById('info-name').textContent = s.name;
   document.getElementById('info-dose').textContent = s.dose ? `용량 ${s.dose}` : '';
 
@@ -1184,13 +1336,90 @@ function renderFit() {
     return;
   }
   el.innerHTML = appData.fitness.map(f => `
-    <div class="item-card">
+    <div class="item-card" data-id="${f.id}" title="우클릭 / 길게 눌러 운동 정보 보기">
       <div class="item-icon-wrap">${iconOf('fitness', f.iconKey)}</div>
       <div class="item-info">
         <div class="item-name">${esc(f.name)}</div>
         <div class="item-meta">${f.sets}×${f.reps}</div>
       </div>
+      <div class="info-dot" title="운동 정보">ⓘ</div>
     </div>`).join('');
+  attachFitCardHandlers();
+}
+
+// Right-click (desktop) / long-press (touch) / ⓘ tap → 운동 정보 popup
+function attachFitCardHandlers() {
+  document.querySelectorAll('#fit-list .item-card[data-id]').forEach(card => {
+    const id  = card.dataset.id;
+    const dot = card.querySelector('.info-dot');
+    if (dot) dot.addEventListener('click', e => { e.stopPropagation(); openFitInfo(id); });
+
+    card.addEventListener('contextmenu', e => { e.preventDefault(); openFitInfo(id); });
+
+    let timer = null, fired = false;
+    card.addEventListener('touchstart', () => {
+      fired = false;
+      timer = setTimeout(() => { fired = true; openFitInfo(id); }, 500);
+    }, { passive: true });
+    const cancel = () => clearTimeout(timer);
+    card.addEventListener('touchend',    e => { clearTimeout(timer); if (fired) e.preventDefault(); });
+    card.addEventListener('touchmove',   cancel, { passive: true });
+    card.addEventListener('touchcancel', cancel);
+  });
+}
+
+function openFitInfo(id) {
+  const f = appData.fitness.find(x => x.id === id);
+  if (!f) return;
+  infoCtx = { type: 'fitness', id };
+  document.getElementById('info-name').textContent = f.name;
+  document.getElementById('info-dose').textContent =
+    `${f.sets}세트 × ${f.reps}회` + (FIT_ICONS[f.iconKey] ? ' · ' + FIT_ICONS[f.iconKey].label : '');
+
+  const info = FIT_INFO[f.iconKey];
+  const primary   = info ? info.primary   : [];
+  const secondary = info ? info.secondary : [];
+  const muscles   = info ? info.muscles   : [];
+  const note      = info ? info.note      : '이 운동에 대한 설명이 아직 없습니다.';
+
+  const tags = muscles.map((m, i) =>
+    `<span class="muscle-tag ${i < primary.length ? 'primary' : 'secondary'}">${esc(m)}</span>`).join('');
+
+  document.getElementById('info-body').innerHTML = `
+    <div class="muscle-wrap">${muscleDiagram(primary, secondary)}</div>
+    <div class="muscle-legend">
+      <span><i class="lg-dot" style="background:#e74c3c"></i>주동근</span>
+      <span><i class="lg-dot" style="background:#f6b3ab"></i>보조근</span>
+      <span><i class="lg-dot" style="background:#dbe1ea"></i>비사용</span>
+    </div>
+    <div class="muscle-tags">${tags}</div>
+    ${note ? `<div class="info-note">${esc(note)}</div>` : ''}`;
+
+  openOverlay('info-overlay');
+}
+
+// Delete the item currently shown in the info popup (보조제 or 피트니스)
+function deleteInfoItem() {
+  if (!infoCtx) return;
+  const { type, id } = infoCtx;
+  const arr  = type === 'supplement' ? appData.supplements : appData.fitness;
+  const item = arr.find(x => x.id === id);
+  if (!item) { closeOverlay('info-overlay'); return; }
+
+  const kind = type === 'supplement' ? '보조제' : '운동';
+  if (!confirm(`'${item.name}' ${kind}을(를) 삭제할까요?\n관련된 캘린더 기록도 함께 삭제됩니다.`)) return;
+
+  if (type === 'supplement') {
+    appData.supplements = appData.supplements.filter(s => s.id !== id);
+    appData.records = appData.records.filter(r => !(r.type === 'supplement' && r.itemId === id));
+  } else {
+    appData.fitness = appData.fitness.filter(f => f.id !== id);
+    appData.records = appData.records.filter(r => !(r.type === 'fitness' && r.itemId === id));
+  }
+  infoCtx = null;
+  closeOverlay('info-overlay');
+  renderAll();
+  scheduleSave();
 }
 
 function renderCal() {
