@@ -375,67 +375,6 @@
       font-family: "Noto Sans KR", sans-serif;
     }
 
-    /* ── Supplement info (right-click / long-press) ── */
-    .info-dot {
-      color: #c3ccd8;
-      font-size: 0.95rem;
-      flex-shrink: 0;
-      cursor: pointer;
-      padding: 0 2px;
-      transition: color 0.12s;
-    }
-    .item-card:hover .info-dot { color: var(--blue); }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 9px 2px;
-      border-bottom: 1px solid var(--border);
-    }
-    .info-k { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
-    .info-v { font-size: 0.9rem; color: #111; font-weight: 700; text-align: right; }
-    .info-note {
-      margin-top: 12px;
-      padding: 11px 13px;
-      background: var(--blue-light);
-      border-radius: 10px;
-      font-size: 0.82rem;
-      line-height: 1.6;
-      color: #33415c;
-      font-family: "Noto Sans KR", sans-serif;
-    }
-
-    /* ── Per-item time inside Day modal ── */
-    .day-item-body { flex: 1; min-width: 0; }
-    .day-item-time-wrap {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-    .time-stepper { display: flex; align-items: center; gap: 8px; }
-    .step-btn {
-      width: 28px; height: 28px;
-      border: 1.5px solid var(--border);
-      background: #f8f8f8;
-      border-radius: 7px;
-      font-size: 1.05rem; font-weight: 700;
-      color: #555; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      line-height: 1; padding: 0;
-      font-family: inherit;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
-    }
-    .step-btn:hover  { background: #eef3ff; border-color: var(--blue); color: var(--blue); }
-    .step-btn:active { background: #dbe7ff; }
-    .step-btn:disabled { opacity: 0.4; cursor: default; background: #f4f4f4; border-color: var(--border); color: #999; }
-    .time-val {
-      min-width: 78px; text-align: center;
-      font-size: 0.86rem; font-weight: 700; color: var(--blue);
-    }
-    .time-hint { font-size: 0.66rem; color: var(--text-muted); }
-
     /* ── Modals ── */
     .overlay {
       position: fixed; inset: 0;
@@ -801,26 +740,11 @@
       <div class="day-section-title" style="margin-top:6px">🏋️ 피트니스</div>
       <div id="day-fit-items"></div>
     </div>
+    <div class="modal-section-label" style="margin-top:10px">시간</div>
+    <input type="time" id="day-time" value="08:00">
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeOverlay('day-overlay')">닫기</button>
       <button class="btn-primary"   onclick="saveDayChanges()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Supplement Info Popup (right-click / long-press) ── -->
-<div class="overlay hidden" id="info-overlay">
-  <div class="modal" style="width:340px">
-    <div class="detail-header" style="border-bottom:none; padding-bottom:6px; margin-bottom:2px">
-      <div>
-        <div class="detail-date" id="info-name" style="font-size:1.2rem"></div>
-        <div class="detail-sub"  id="info-dose"></div>
-      </div>
-      <button class="detail-close-btn" onclick="closeOverlay('info-overlay')" title="닫기">✕</button>
-    </div>
-    <div id="info-body"></div>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="closeOverlay('info-overlay')">확인</button>
     </div>
   </div>
 </div>
@@ -894,12 +818,6 @@ const SUPP_ICONS = {
   probiotics:   { label:'유산균',     svg: `<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="14" fill="#A5D6A7"/><circle cx="12" cy="14" r="4.5" fill="#66BB6A"/><circle cx="24" cy="14" r="4.5" fill="#66BB6A"/><circle cx="18" cy="24" r="4.5" fill="#66BB6A"/></svg>` },
   turmeric:     { label:'강황',       svg: mkCircle('#FDD835','<path d="M11 18 Q18 9 25 18 Q18 27 11 18Z" fill="#F9A825"/>') },
   collagen:     { label:'콜라겐',     svg: mkCircle('#FFCCBC','<path d="M10 18 C12 11 16 9 18 14 C20 9 24 11 26 18 C24 25 20 27 18 22 C16 27 12 25 10 18Z" fill="#FF8A65"/>') },
-  // Functional / nootropic types
-  lions_mane:   { label:'사자갈기버섯', svg: `<svg viewBox="0 0 36 36"><path d="M18 6 C9 6 6 12 6 16 C6 18.5 8.5 19.5 10.5 18.3 C11.3 20.4 13.6 20.6 14.8 18.6 C15.7 20.7 18 20.9 18.9 18.7 C19.8 20.9 22.1 20.7 23 18.6 C24.2 20.6 26.5 20.4 27.3 18.3 C29.3 19.5 30 18.5 30 16 C30 12 27 6 18 6Z" fill="#E0B070"/><path d="M11 16 v3 M15 17 v3 M18 17 v3 M21 17 v3 M25 16 v3" stroke="#C9974F" stroke-width="1.4" stroke-linecap="round"/><rect x="15" y="18" width="6" height="11" rx="3" fill="#F1DCB8"/></svg>` },
-  l_theanine:   { label:'L-테아닌',   svg: `<svg viewBox="0 0 36 36"><path d="M18 4 C8 8 6 20 10 31 C20 29 30 18 28 6 C24 9 16 10 18 4Z" fill="#5CB85C"/><path d="M14 27 Q19 16 26 9" stroke="#2E7D32" stroke-width="2" fill="none" stroke-linecap="round"/></svg>` },
-  saffron:      { label:'사프란',     svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#FFF3E0"/><path d="M18 18 L11 7 M18 18 L25 7 M18 18 L6 16 M18 18 L30 16 M18 18 L18 31" stroke="#D32F2F" stroke-width="2.4" stroke-linecap="round"/><circle cx="18" cy="18" r="3" fill="#F9A825"/></svg>` },
-  mineral_complex:{ label:'종합미네랄', svg: `<svg viewBox="0 0 36 36"><rect x="3" y="11" width="30" height="14" rx="7" fill="#455A64"/><rect x="18" y="11" width="15" height="14" fill="#78909C"/><rect x="25" y="11" width="8" height="14" rx="7" fill="#78909C"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold" font-family="Arial">MIN</text></svg>` },
-  mag_threonate:{ label:'L-트레오네이트', svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#26A69A"/><path d="M12 12 Q9 14 11 17 Q8 19 11 22 Q10 26 15 25 Q18 28 21 25 Q26 26 25 22 Q28 19 25 17 Q27 14 24 12 Q22 8 18 11 Q14 8 12 12Z" fill="#B2DFDB"/><text x="18" y="21" text-anchor="middle" fill="#00695C" font-size="7" font-weight="bold" font-family="Arial">Mg</text></svg>` },
   // Power types (5)
   creatine:     { label:'크레아틴',   svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#1565C0"/><polygon points="18,5 21,14 31,14 23,20 26,30 18,24 10,30 13,20 5,14 15,14" fill="#90CAF9"/></svg>` },
   protein:      { label:'프로틴',     svg: `<svg viewBox="0 0 36 36"><rect x="2" y="2" width="32" height="32" rx="7" fill="#B71C1C"/><text x="18" y="16" text-anchor="middle" fill="#EF9A9A" font-size="8" font-weight="bold" font-family="Arial">PRO</text><text x="18" y="27" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold" font-family="Arial">TEIN</text></svg>` },
@@ -929,40 +847,7 @@ const FIT_ICONS = {
   lunge:          { label:'런지',        svg: `<svg viewBox="0 0 36 36"><circle cx="20" cy="5" r="4" fill="#1A237E"/><path d="M16 9 L13 18 L7 24 L10 29 L18 25 L20 18 L26 22 L29 33 L33 31 L28 19 L23 15 L21 9 Z" fill="#283593"/></svg>` },
   burpee:         { label:'버피',        svg: `<svg viewBox="0 0 36 36"><circle cx="28" cy="5" r="4" fill="#B71C1C"/><path d="M24 9 L20 15 L13 13 L7 19 L9 25 L15 23 L18 28 L24 28 L28 21 L26 15 Z" fill="#C62828"/><circle cx="5" cy="33" r="3.5" fill="#C62828"/><circle cx="31" cy="33" r="3.5" fill="#C62828"/></svg>` },
   stretching:     { label:'스트레칭',    svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="5" r="4" fill="#1B5E20"/><path d="M14 9 L5 15 L13 18 L18 12 L23 18 L31 15 L22 9 Z" fill="#2E7D32"/><line x1="18" y1="12" x2="15" y2="28" stroke="#388E3C" stroke-width="2"/><line x1="18" y1="12" x2="21" y2="28" stroke="#388E3C" stroke-width="2"/><line x1="15" y1="28" x2="9" y2="34" stroke="#388E3C" stroke-width="2"/><line x1="21" y1="28" x2="27" y2="34" stroke="#388E3C" stroke-width="2"/></svg>` },
-  chest_press:    { label:'체스트프레스', svg: `<svg viewBox="0 0 36 36"><circle cx="9" cy="11" r="4" fill="#2E7D32"/><rect x="24" y="7" width="5" height="22" rx="2" fill="#388E3C"/><rect x="29" y="12" width="5" height="12" rx="2" fill="#43A047"/><path d="M9 15 L18 18 L24 18 M9 19 L18 18" stroke="#388E3C" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
-  pec_fly:        { label:'펙플라이',     svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="9" r="4" fill="#00695C"/><line x1="18" y1="13" x2="18" y2="25" stroke="#00897B" stroke-width="3" stroke-linecap="round"/><path d="M18 16 C12 14 7 16 5 21 M18 16 C24 14 29 16 31 21" stroke="#00897B" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="5" cy="21" r="3" fill="#00897B"/><circle cx="31" cy="21" r="3" fill="#00897B"/></svg>` },
-  seated_row:     { label:'시티드로우',   svg: `<svg viewBox="0 0 36 36"><circle cx="8" cy="10" r="4" fill="#37474F"/><path d="M8 14 L13 20 L8 28" stroke="#546E7A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="20" x2="26" y2="20" stroke="#607D8B" stroke-width="2.5" stroke-linecap="round"/><rect x="26" y="14" width="5" height="12" rx="2" fill="#607D8B"/><circle cx="13" cy="20" r="2.5" fill="#546E7A"/></svg>` },
-  lat_pulldown:   { label:'랫풀다운',     svg: `<svg viewBox="0 0 36 36"><rect x="6" y="5" width="24" height="4" rx="2" fill="#4527A0"/><line x1="12" y1="9" x2="12" y2="14" stroke="#5E35B1" stroke-width="2"/><line x1="24" y1="9" x2="24" y2="14" stroke="#5E35B1" stroke-width="2"/><circle cx="18" cy="18" r="4.5" fill="#5E35B1"/><path d="M12 14 L18 16 L24 14" stroke="#7E57C2" stroke-width="2" fill="none"/><line x1="18" y1="22" x2="15" y2="31" stroke="#7E57C2" stroke-width="2"/><line x1="18" y1="22" x2="21" y2="31" stroke="#7E57C2" stroke-width="2"/></svg>` },
-  calf_raise:     { label:'종아리',       svg: `<svg viewBox="0 0 36 36"><circle cx="18" cy="6" r="3.5" fill="#BF360C"/><path d="M18 9 L18 18 Q18 22 16 26 L13 32 L19 32 L21 26 Q23 22 22 18 L21 9Z" fill="#D84315"/><path d="M13 32 L23 32" stroke="#BF360C" stroke-width="2" stroke-linecap="round"/><path d="M20 14 Q24 16 23 21" stroke="#FF7043" stroke-width="2" fill="none" stroke-linecap="round"/></svg>` },
 };
-
-// ═══════════════════════════════════════════════
-// Seed Catalog (auto-added once)
-//   recTime  = 권장 시간 (자동 배정; 복용 기록 시 ±2시간 내 조절 가능)
-//   perWeek  = 주당 권장 복용 횟수
-// ═══════════════════════════════════════════════
-const SUPP_SEED = [
-  { name:"Lion's Mane (500mg)",              iconKey:'lions_mane',      dose:'500mg',  perWeek:7, recTime:'09:00', recLabel:'아침 식후', note:'인지력·집중력·신경 건강 지원. 아침 식사 후 복용을 권장합니다. 꾸준히 매일.' },
-  { name:"L-Theanine (200mg)",               iconKey:'l_theanine',      dose:'200mg',  perWeek:7, recTime:'21:00', recLabel:'취침 전',  note:'이완·수면 질 개선. 취침 약 1시간 전 복용. (집중용으로는 아침 카페인과 함께도 가능)' },
-  { name:"Collagen Complex (powder)",        iconKey:'collagen',        dose:'분말',   perWeek:7, recTime:'09:00', recLabel:'아침 공복', note:'피부·관절·결합조직 지원. 아침 공복에 비타민C와 함께 물·음료에 타서 복용.' },
-  { name:"Saffron (88.5mg Extract)",         iconKey:'saffron',         dose:'88.5mg', perWeek:7, recTime:'20:00', recLabel:'저녁 식후', note:'기분·정서 안정 지원. 매일 일정한 시간(저녁 식후)에 꾸준히 복용.' },
-  { name:"Full Spectrum Mineral Caps",       iconKey:'mineral_complex', dose:'캡슐',   perWeek:7, recTime:'19:00', recLabel:'저녁 식후', note:'종합 미네랄. 저녁 식사와 함께 복용 시 흡수가 좋습니다. (칼슘·마그네슘 등 포함)' },
-  { name:"L-Threonate (2000mg)",             iconKey:'mag_threonate',   dose:'2000mg', perWeek:7, recTime:'21:00', recLabel:'취침 전',  note:'마그네슘 L-트레오네이트. 뇌 건강·수면 지원. 취침 1~2시간 전 복용.' },
-  { name:"Omega 3 (fish oil 1250mg)",        iconKey:'omega3',          dose:'1250mg', perWeek:7, recTime:'19:00', recLabel:'저녁 식후', note:'오메가3(EPA/DHA). 지방이 포함된 식사와 함께 복용 시 흡수율이 높아집니다.' },
-];
-
-const FIT_SEED = [
-  { name:'바벨 스쿼트',       iconKey:'squat',          sets:4, reps:8  },
-  { name:'덤벨 숄더 프레스',  iconKey:'shoulder_press', sets:3, reps:12 },
-  { name:'체스트 프레스',     iconKey:'chest_press',    sets:3, reps:12 },
-  { name:'펙 플라이 머신',    iconKey:'pec_fly',        sets:3, reps:15 },
-  { name:'시티드 로우',       iconKey:'seated_row',     sets:3, reps:12 },
-  { name:'랫풀다운',          iconKey:'lat_pulldown',   sets:3, reps:12 },
-  { name:'종아리 운동',       iconKey:'calf_raise',     sets:4, reps:20 },
-];
-
-// Less-common exercises removed to make room for the 7 above (by icon).
-const FIT_REMOVE_ICONS = ['burpee','jump_rope','swimming','cycling','rowing','dips','plank'];
 
 // ═══════════════════════════════════════════════
 // State
@@ -999,71 +884,6 @@ function getThisMonday() {
 function iconOf(type, key) {
   const lib = type==='supplement' ? SUPP_ICONS : FIT_ICONS;
   return (lib[key] || Object.values(lib)[0]).svg;
-}
-// ── Time math (for recommended-time auto-fill & ±2h clamp) ──
-const timeToMin = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
-const minToTime = x => { x=((x%1440)+1440)%1440; return `${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`; };
-const minToTimeRaw = x => { x=Math.max(0,Math.min(1439,x)); return `${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`; };
-function clampTime(t, rec, span) {        // keep t within ±span minutes of rec
-  if (!rec) return t;
-  const v = timeToMin(t), r = timeToMin(rec);
-  return minToTime(Math.max(r-span, Math.min(r+span, v)));
-}
-
-// ═══════════════════════════════════════════════
-// One-time Seed / Migration
-// ═══════════════════════════════════════════════
-function runSeedV1() {
-  // Supplements: add any missing catalog item, and backfill recommendation
-  // metadata onto items that already exist by the same name.
-  SUPP_SEED.forEach(seed => {
-    let s = appData.supplements.find(x => x.name === seed.name);
-    if (!s) { s = { id: uid() }; appData.supplements.push(s); }
-    Object.assign(s, {
-      name: seed.name, iconKey: s.iconKey || seed.iconKey,
-      dose: seed.dose, perWeek: seed.perWeek,
-      recTime: seed.recTime, recLabel: seed.recLabel, note: seed.note,
-    });
-  });
-
-  // Fitness: drop the less-common exercises (and their records), then add the new set.
-  const removedIds = appData.fitness.filter(f => FIT_REMOVE_ICONS.includes(f.iconKey)).map(f => f.id);
-  appData.fitness  = appData.fitness.filter(f => !FIT_REMOVE_ICONS.includes(f.iconKey));
-  if (removedIds.length)
-    appData.records = appData.records.filter(r => !(r.type==='fitness' && removedIds.includes(r.itemId)));
-
-  FIT_SEED.forEach(seed => {
-    if (!appData.fitness.some(f => f.name === seed.name))
-      appData.fitness.push({ id: uid(), ...seed });
-  });
-}
-
-// V2: rename "Full Spectrum Mineral Caps (Now)" → "Full Spectrum Mineral Caps",
-//     and refresh recommended metadata (e.g. morning 08:00 → 09:00).
-function runSeedV2() {
-  const OLD = 'Full Spectrum Mineral Caps (Now)';
-  const NEW = 'Full Spectrum Mineral Caps';
-  appData.supplements.forEach(s => { if (s.name === OLD) s.name = NEW; });
-  appData.records.forEach(r => { if (r.itemName === OLD) r.itemName = NEW; });
-
-  SUPP_SEED.forEach(seed => {
-    const s = appData.supplements.find(x => x.name === seed.name);
-    if (s) Object.assign(s, {
-      dose: seed.dose, perWeek: seed.perWeek,
-      recTime: seed.recTime, recLabel: seed.recLabel, note: seed.note,
-    });
-  });
-}
-
-// Run any pending one-time migrations, then stamp the current version.
-const SEED_VERSION = 2;
-function runMigrations() {
-  const v = appData.seedVersion || 0;
-  if (v < 1) runSeedV1();
-  if (v < 2) runSeedV2();
-  const pending = v < SEED_VERSION;
-  appData.seedVersion = SEED_VERSION;
-  return pending;
 }
 
 // ═══════════════════════════════════════════════
@@ -1123,58 +943,11 @@ function renderSupp() {
     el.innerHTML = '<div class="empty-hint">보조제를 추가하세요<br>+ 추가 버튼을 누르세요</div>';
     return;
   }
-  el.innerHTML = appData.supplements.map(s => {
-    const hasInfo = !!(s.recTime || s.perWeek || s.note);
-    const meta = s.dose ? `<div class="item-meta">${esc(s.dose)}${s.recLabel?' · '+esc(s.recLabel):''}</div>` : '';
-    return `
-    <div class="item-card" data-id="${s.id}"${hasInfo?' title="우클릭 / 길게 눌러 복용 정보 보기"':''}>
+  el.innerHTML = appData.supplements.map(s => `
+    <div class="item-card">
       <div class="item-icon-wrap">${iconOf('supplement', s.iconKey)}</div>
-      <div class="item-info"><div class="item-name">${esc(s.name)}</div>${meta}</div>
-      ${hasInfo?'<div class="info-dot" title="복용 정보">ⓘ</div>':''}
-    </div>`;
-  }).join('');
-  attachSuppCardHandlers();
-}
-
-// Right-click (desktop) / long-press (touch) / ⓘ tap → 복용 정보 popup
-function attachSuppCardHandlers() {
-  document.querySelectorAll('#supp-list .item-card[data-id]').forEach(card => {
-    const id  = card.dataset.id;
-    const dot = card.querySelector('.info-dot');
-    if (dot) dot.addEventListener('click', e => { e.stopPropagation(); openSuppInfo(id); });
-
-    card.addEventListener('contextmenu', e => { e.preventDefault(); openSuppInfo(id); });
-
-    let timer = null, fired = false;
-    card.addEventListener('touchstart', () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; openSuppInfo(id); }, 500);
-    }, { passive: true });
-    const cancel = () => clearTimeout(timer);
-    card.addEventListener('touchend',    e => { clearTimeout(timer); if (fired) e.preventDefault(); });
-    card.addEventListener('touchmove',   cancel, { passive: true });
-    card.addEventListener('touchcancel', cancel);
-  });
-}
-
-function openSuppInfo(id) {
-  const s = appData.supplements.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('info-name').textContent = s.name;
-  document.getElementById('info-dose').textContent = s.dose ? `용량 ${s.dose}` : '';
-
-  const freqTxt = s.perWeek ? (s.perWeek >= 7 ? '매일 (주 7회)' : `주 ${s.perWeek}회`) : '—';
-  const timeTxt = s.recTime ? `${s.recLabel ? esc(s.recLabel)+' · ' : ''}${fmt12(s.recTime)}` : '—';
-  const rangeTxt = s.recTime
-    ? `${fmt12(minToTime(timeToMin(s.recTime)-180))} ~ ${fmt12(minToTime(timeToMin(s.recTime)+180))}` : '';
-
-  document.getElementById('info-body').innerHTML = `
-    <div class="info-row"><span class="info-k">권장 빈도</span><span class="info-v">${freqTxt}</span></div>
-    <div class="info-row"><span class="info-k">권장 시간대</span><span class="info-v">${timeTxt}</span></div>
-    ${rangeTxt?`<div class="info-row"><span class="info-k">조절 가능 범위</span><span class="info-v">${rangeTxt}</span></div>`:''}
-    ${s.note?`<div class="info-note">${esc(s.note)}</div>`:''}`;
-
-  openOverlay('info-overlay');
+      <div class="item-info"><div class="item-name">${esc(s.name)}</div></div>
+    </div>`).join('');
 }
 
 function renderFit() {
@@ -1500,6 +1273,10 @@ function openDayModal(dateStr) {
   const [y,m,d] = dateStr.split('-');
   document.getElementById('day-title').textContent = `${parseInt(m)}월 ${parseInt(d)}일 (${y})`;
 
+  const now = new Date();
+  document.getElementById('day-time').value =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
   const dayRecs = appData.records.filter(r => r.date === dateStr);
 
   // Supplements
@@ -1533,106 +1310,40 @@ function makeDayItem(item, type, existRec) {
   const on = !!existRec;
   const el = document.createElement('div');
   el.className = 'day-item';
-  el.dataset.itemId = item.id;
-  el.dataset.type   = type;
-  el.dataset.recId  = existRec ? existRec.id : '';
+  el.dataset.itemId  = item.id;
+  el.dataset.type    = type;
+  el.dataset.recId   = existRec ? existRec.id : '';
 
-  // meta line
-  let meta = '';
-  if (type === 'fitness') meta = `<div class="day-item-meta">${item.sets}×${item.reps}</div>`;
-  else if (item.dose || item.recLabel)
-    meta = `<div class="day-item-meta">${esc([item.dose, item.recLabel].filter(Boolean).join(' · '))}</div>`;
-
-  // recommended time → auto-filled; adjustable in 15-min steps within ±3h (supplements only)
-  const recTime = type === 'supplement' ? (item.recTime || '') : '';
-  el.dataset.recTime = recTime;
-  const defTime = existRec ? existRec.time : (recTime || (type === 'fitness' ? '18:00' : '09:00'));
-
-  // step bounds
-  let lo, hi;
-  if (recTime) { lo = timeToMin(recTime) - 180; hi = timeToMin(recTime) + 180; }
-  else         { lo = 0; hi = 1425; }                       // free range, 23:45 max
-  lo = Math.ceil(Math.max(0, lo) / 15) * 15;                // snap bounds to 15-min grid
-  hi = Math.floor(Math.min(1439, hi) / 15) * 15;
-
-  const hint = recTime
-    ? `<span class="time-hint">권장 ${fmt12(recTime)} · ±3시간 (15분 단위)</span>`
-    : `<span class="time-hint">15분 단위</span>`;
-
+  const meta = type==='fitness' ? `<div class="day-item-meta">${item.sets}×${item.reps}</div>` : '';
   el.innerHTML = `
     <div class="day-item-icon">${iconOf(type, item.iconKey)}</div>
-    <div class="day-item-body">
+    <div style="flex:1;min-width:0">
       <div class="day-item-name">${esc(item.name)}</div>${meta}
-      <div class="day-item-time-wrap" style="display:${on?'flex':'none'}">
-        <div class="time-stepper" data-time="${defTime}" data-lo="${lo}" data-hi="${hi}">
-          <button type="button" class="step-btn" data-dir="-1" aria-label="15분 빼기">−</button>
-          <span class="time-val">${fmt12(defTime)}</span>
-          <button type="button" class="step-btn" data-dir="1" aria-label="15분 더하기">+</button>
-        </div>
-        ${hint}
-      </div>
     </div>
     <div class="check-circle ${on?'on':''}">${on?'✓':''}</div>`;
 
-  const circle   = el.querySelector('.check-circle');
-  const timeWrap = el.querySelector('.day-item-time-wrap');
-  const stepper  = el.querySelector('.time-stepper');
-  const valSpan  = el.querySelector('.time-val');
-  const minusBtn = el.querySelector('.step-btn[data-dir="-1"]');
-  const plusBtn  = el.querySelector('.step-btn[data-dir="1"]');
-
-  function renderStep() {
-    const cur = timeToMin(stepper.dataset.time);
-    valSpan.textContent = fmt12(stepper.dataset.time);
-    minusBtn.disabled = cur <= lo;
-    plusBtn.disabled  = cur >= hi;
-  }
-  function setTime(mins) {
-    mins = Math.max(lo, Math.min(hi, mins));
-    stepper.dataset.time = minToTimeRaw(mins);
-    renderStep();
-  }
-  el.querySelectorAll('.step-btn').forEach(b =>
-    b.addEventListener('click', e => {
-      e.stopPropagation();
-      setTime(timeToMin(stepper.dataset.time) + (+b.dataset.dir) * 15);
-    })
-  );
-  renderStep();
-
-  el.addEventListener('click', e => {
-    if (e.target.closest('.day-item-time-wrap')) return;   // adjusting time, don't toggle
+  const circle = el.querySelector('.check-circle');
+  el.addEventListener('click', () => {
     const wasOn = circle.classList.contains('on');
     circle.classList.toggle('on', !wasOn);
     circle.textContent = !wasOn ? '✓' : '';
-    timeWrap.style.display = !wasOn ? 'flex' : 'none';
-    if (!wasOn) { stepper.dataset.time = defTime; renderStep(); }   // reset to recommended
   });
   return el;
 }
 
 function saveDayChanges() {
   if (!selDay) return;
+  const timeVal = document.getElementById('day-time').value || '08:00';
 
   function processItems(containerEl, type, itemsArr) {
     containerEl.querySelectorAll('.day-item').forEach(el => {
-      const itemId  = el.dataset.itemId;
-      const recId   = el.dataset.recId;
-      const recTime = el.dataset.recTime || '';
-      const isOn    = el.querySelector('.check-circle').classList.contains('on');
-      const stepper = el.querySelector('.time-stepper');
-
-      let time = (stepper && stepper.dataset.time) || recTime || '09:00';
-      if (recTime) time = clampTime(time, recTime, 180);   // enforce ±3h
-
-      if (isOn) {
+      const itemId = el.dataset.itemId;
+      const recId  = el.dataset.recId;
+      const isOn   = el.querySelector('.check-circle').classList.contains('on');
+      if (isOn && !recId) {
         const item = itemsArr.find(x => x.id === itemId);
-        if (!item) return;
-        if (recId) {                                        // update existing record's time
-          const rec = appData.records.find(r => r.id === recId);
-          if (rec) { rec.time = time; rec.itemName = item.name; rec.iconKey = item.iconKey; }
-        } else {                                            // create new record
-          const rec = { id:uid(), date:selDay, time, type, itemId:item.id, itemName:item.name, iconKey:item.iconKey };
+        if (item) {
+          const rec = { id:uid(), date:selDay, time:timeVal, type, itemId:item.id, itemName:item.name, iconKey:item.iconKey };
           if (type==='fitness') { rec.sets=item.sets; rec.reps=item.reps; }
           appData.records.push(rec);
         }
@@ -1655,7 +1366,7 @@ function saveDayChanges() {
 // ═══════════════════════════════════════════════
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['add-overlay','rm-overlay','day-overlay','detail-overlay','info-overlay'].forEach(closeOverlay);
+    ['add-overlay','rm-overlay','day-overlay','detail-overlay'].forEach(closeOverlay);
   }
   if (e.key === 'Enter') {
     if (!document.getElementById('add-overlay').classList.contains('hidden')) confirmAdd();
@@ -1668,7 +1379,6 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════
 (async () => {
   await doLoad();
-  if (runMigrations()) scheduleSave();   // seed new items / apply one-time fixes
   renderAll();
 })();
 </script>
